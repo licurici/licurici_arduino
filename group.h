@@ -2,17 +2,40 @@
 #define __LedGroup__
 
 #include <Adafruit_WS2801.h>
+#include "color.h"
+
+class LedGroup;
+
+typedef void (* Animation) (LedGroup* group);
+typedef void (* SelectionStrategy) (LedGroup* group);
 
 class LedGroup {
 
   public:
     LedGroup(Adafruit_WS2801* strip, int start, int length);
 
+    void animate();
 
-  private:
+    Animation animation;
+    SelectionStrategy selection;
+    int animationSteps;
+
     Adafruit_WS2801* strip;
     int start;
     int length;
+
+    bool reachedTarget(byte);
+    bool isSelected(byte);
+    
+    Color targetColors[10];
+    byte state[10];
+    byte increment[10][3];
+    int selected[10];
+    int selectionLen;
+
+    private:
+      byte counter;
 };
+
 
 #endif // __LedGroup__

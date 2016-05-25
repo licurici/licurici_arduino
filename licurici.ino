@@ -1,34 +1,37 @@
 #include <Adafruit_WS2801.h>
 #include "group.h"
+#include "groupAnimation.h"
 
 const uint8_t dataPin  = 2;    // Yellow wire on Adafruit Pixels
 const uint8_t clockPin = 3;    // Green wire on Adafruit Pixels
 const int ledCount = 25;
 
-uint32_t desiredRed;
-uint32_t desiredGreen;
-uint32_t desiredBlue;
-
 Adafruit_WS2801 strip = Adafruit_WS2801(ledCount, dataPin, clockPin);
 LedGroup group = LedGroup(&strip, 0, 25);
 
-void setup() {
+void setup() {  
+  delay(2000);
+
   Serial.begin(9600);
 
   strip.begin();
 
   // Update LED contents, to start they are all 'off'
   strip.show();
-
-  desiredRed = 255;
-  desiredGreen = 0;
-  desiredBlue = 255;
+  
+  group.animation = &flicker;
+  group.selection = &flickerStrategy;
+  group.animationSteps = 10;
 }
 
 void loop() {
-  showFireflies();
-}
 
+  group.animate();
+  strip.show();
+  delay(20);
+
+}
+/*
 int* selectRandomPixels() {
 
   int* pixels = (int*) malloc(sizeof(int) * 5);
@@ -68,32 +71,4 @@ void showFireflies() {
 
     free(pixels);
 }
-
-// Create a 24 bit color value from R,G,B
-uint32_t Color(byte r, byte g, byte b)
-{
-  uint32_t c;
-  c = r;
-  c <<= 8;
-  c |= g;
-  c <<= 8;
-  c |= b;
-  return c;
-}
-
-// Create a 24 bit color value from R,G,B
-byte Blue(uint32_t color)
-{
-  return (byte) color;
-}
-
-byte Green(uint32_t color)
-{
-  return (byte) (color >> 8);
-}
-
-byte Red(uint32_t color)
-{
-  return (byte) (color >> 16);
-}
-
+*/
