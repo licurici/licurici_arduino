@@ -93,7 +93,6 @@ void road(LedGroup* group) {
 
   switch(group->state[0]) {
     case 0:
-      Serial.println(group->state[0]);
       group->targetColors[0] = currentColor;
       group->state[0]++;
       break;
@@ -103,7 +102,6 @@ void road(LedGroup* group) {
       break;
 
     case 2:
-      Serial.println(group->state[0]);
       group->targetColors[0] = createColor(0,0,0);
       group->targetColors[1] = currentColor;
       group->state[0]++;
@@ -114,7 +112,6 @@ void road(LedGroup* group) {
       break;
       
     case 4:
-      Serial.println(group->state[0]);
       group->targetColors[1] = createColor(0,0,0);
       group->targetColors[2] = currentColor;
       group->state[0]++;
@@ -125,7 +122,6 @@ void road(LedGroup* group) {
       break;
 
     case 6:
-      Serial.println(group->state[0]);
       group->targetColors[2] = createColor(0,0,0);
       group->state[0]++;
       break;
@@ -135,7 +131,6 @@ void road(LedGroup* group) {
       break;
       
     default:
-      Serial.println(group->state[0]);
       group->waitFrames = 50;
       nextRoad(group);
       group->state[0] = 0;
