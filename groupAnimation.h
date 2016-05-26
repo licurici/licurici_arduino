@@ -12,7 +12,8 @@ void roadStrategy(LedGroup* group);
 void hide(LedGroup* group);
 void hideStrategy(LedGroup* group);
 
-void randomStrategy(LedGroup* group);
+void show(LedGroup* group);
+void showStrategy(LedGroup* group);
 
 
 

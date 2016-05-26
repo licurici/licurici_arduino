@@ -167,6 +167,7 @@ void selectHideLed(LedGroup* group, int i) {
   Serial.println(percentHidden);
   if(percentHidden > group->hidePercent) {
     group->waitFrames = 100;
+    group->animationDone = true;
     return;
   }
 
@@ -214,6 +215,7 @@ void hide(LedGroup* group) {
 
 void hideStrategy(LedGroup* group) {
   group->selectionLen = 10;
+  group->animationDone = false;
 
   for(int i=0;i<group->selectionLen; i++) {
     group->state[i] = 2;
@@ -224,16 +226,88 @@ void hideStrategy(LedGroup* group) {
   }
 }
 
-void randomStrategy(LedGroup* group) {
-  group->selectionLen = 10;
+void selectShowLed(LedGroup* group, int i) {
+  int selected = random(0, group->length);
+  int index = 0;
+  double countHidden = 0;
+  int percentHidden = 0;
 
-  for(int i=0; i<10; i++) {
-    group->state[i] = 1;
+  for(int i=0; i<group->length; i++) {
+    if(group->isHidden(i)) {
+      countHidden++;
+    }
+  }
+
+  percentHidden = (countHidden / (double)group->length) * 100;
+  Serial.println(percentHidden);
+  if(percentHidden == 0) {
+    group->waitFrames = 100;
+    group->animationDone = true;
+    return;
+  }
+
+  //select a random led
+  while(group->getColor(selected) == currentColor || index == 10) {
+    selected = random(0, group->length);
+    index++;
+  }
+
+  //if we can't find a random led
+  if(index == 10) {
+    for(int i=0; i<group->length; i++) {
+      if(group->getColor(selected) != currentColor) {
+        selected = i;
+        index = 0;
+      }
+    }
+  }
+
+  if(index == 10) {
+    group->waitFrames = 100;
+  }
+    
+  group->selected[i] = selected;
+}
+
+void showLed(LedGroup* group, int i) {
+  int index = random(1, 3);
+  
+  byte r = min(Red(currentColor) + index, Red(currentColor));
+  byte g = min(Green(currentColor) + index, Green(currentColor));
+  byte b = min(Blue(currentColor) + index, Blue(currentColor));
+
+  group->waitFrames = 500;
+  group->targetColors[i] = createColor(r,g,b);
+}
+
+void show(LedGroup* group) {
+  for(int i=0;i<group->selectionLen; i++) {
+    switch(group->state[i]) {
+        case 0:
+          showLed(group, i);
+          group->state[i]++;
+          break;
+  
+        case 2:
+          selectShowLed(group, i);
+          group->state[i] = 0;
+          break;
+          
+        default:
+          checkState(group, i, i);
+     }
+   }
+}
+
+void showStrategy(LedGroup* group) {
+  group->selectionLen = 3;
+
+  for(int i=0;i<10; i++) {
     group->increment[i][0] = 1;
     group->increment[i][1] = 1;
     group->increment[i][2] = 1;
-    group->selected[i] = random(0, group->length);
+
+    group->state[i] = 2;
   }
 }
-
 

@@ -37,6 +37,9 @@ void setup() {
   group.animation = &hide;
   group.selection = &hideStrategy;
   group.hidePercent = 20;*/
+
+  group.animation = &show;
+  group.selection = &showStrategy;  
 }
 
 void loop() {
