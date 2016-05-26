@@ -19,9 +19,11 @@ void setup() {
   // Update LED contents, to start they are all 'off'
   strip.show();
   
-  group.animation = &flicker;
-  group.selection = &flickerStrategy;
-  group.animationSteps = 10;
+  //group.animation = &flicker;
+  //group.selection = &flickerStrategy;
+
+  group.animation = &road;
+  group.selection = &roadStrategy;
 }
 
 void loop() {

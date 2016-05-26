@@ -18,7 +18,7 @@ class LedGroup {
 
     Animation animation;
     SelectionStrategy selection;
-    int animationSteps;
+    int waitFrames;
 
     Adafruit_WS2801* strip;
     int start;

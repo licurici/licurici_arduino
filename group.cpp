@@ -12,6 +12,10 @@ LedGroup::LedGroup(Adafruit_WS2801* strip, int start, int length) {
 
 
 void LedGroup::animate() {
+  if(waitFrames > 0) {
+    waitFrames--;
+    return;
+  }
   
   if(counter == 0) {
     selection(this);
