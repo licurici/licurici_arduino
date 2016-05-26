@@ -26,12 +26,17 @@ class LedGroup {
 
     bool reachedTarget(byte);
     bool isSelected(byte);
+    bool isHidden(byte);
+    
+    Color getColor(byte);
     
     Color targetColors[10];
     byte state[10];
     byte increment[10][3];
     int selected[10];
     int selectionLen;
+    
+    int hidePercent;
 
     private:
       byte counter;

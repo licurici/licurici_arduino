@@ -9,6 +9,9 @@ void flickerStrategy(LedGroup* group);
 void road(LedGroup* group);
 void roadStrategy(LedGroup* group);
 
+void hide(LedGroup* group);
+void hideStrategy(LedGroup* group);
+
 void randomStrategy(LedGroup* group);
 
 

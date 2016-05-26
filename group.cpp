@@ -48,3 +48,11 @@ bool LedGroup::isSelected(byte index) {
   
   return false; 
 }
+
+bool LedGroup::isHidden(byte index) {  
+  return strip->getPixelColor(start + index) == 0;
+}
+
+Color LedGroup::getColor(byte index) {  
+  return strip->getPixelColor(start + index);
+}

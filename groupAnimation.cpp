@@ -1,7 +1,7 @@
 #include "groupAnimation.h"
 
 
-Color currentColor = createColor(10, 0, 10);
+Color currentColor = createColor(5, 10, 0);
 
 void checkState(LedGroup* group, int i, int state) {
   if(group->reachedTarget(i)) {
@@ -148,6 +148,79 @@ void roadStrategy(LedGroup* group) {
     group->increment[i][0] = 3;
     group->increment[i][1] = 3;
     group->increment[i][2] = 3;
+  }
+}
+
+void selectHideLed(LedGroup* group, int i) {
+  int selected = random(0, group->length);
+  int index = 0;
+  double countHidden = 0;
+  int percentHidden = 0;
+
+  for(int i=0; i<group->length; i++) {
+    if(group->isHidden(i)) {
+      countHidden++;
+    }
+  }
+
+  percentHidden = (countHidden / (double)group->length) * 100;
+  Serial.println(percentHidden);
+  if(percentHidden > group->hidePercent) {
+    group->waitFrames = 100;
+    return;
+  }
+
+  //select a random led
+  while(group->isHidden(selected) || index == 10) {
+    selected = random(0, group->length);
+    index++;
+  }
+
+  //if we can't find a random led
+  if(index == 10) {
+    for(int i=0; i<group->length; i++) {
+      if(!group->isHidden(i)) {
+        selected = i;
+        index = 0;
+      }
+    }
+  }
+
+  if(index == 10) {
+    group->waitFrames = 100;
+  }
+    
+  group->selected[i] = selected;
+}
+
+void hide(LedGroup* group) {
+  for(int i=0;i<group->selectionLen; i++) {
+    switch(group->state[i]) {
+        case 0:
+          group->targetColors[i] = 0;
+          group->state[i]++;
+          break;
+  
+        case 2:
+          selectHideLed(group, i);
+          group->state[i] = 0;
+          break;
+          
+        default:
+          checkState(group, i, i);
+     }
+   }
+}
+
+void hideStrategy(LedGroup* group) {
+  group->selectionLen = 10;
+
+  for(int i=0;i<group->selectionLen; i++) {
+    group->state[i] = 2;
+    
+    group->increment[i][0] = random(1, 5);
+    group->increment[i][1] = random(1, 5);
+    group->increment[i][2] = random(1, 5);
   }
 }
 

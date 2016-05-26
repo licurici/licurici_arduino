@@ -22,8 +22,21 @@ void setup() {
   //group.animation = &flicker;
   //group.selection = &flickerStrategy;
 
-  group.animation = &road;
-  group.selection = &roadStrategy;
+  //group.animation = &road;
+  //group.selection = &roadStrategy;
+
+  /*
+  //pt debug
+  for(int i = 0; i<25; i++) {
+    strip.setPixelColor(i, createColor(5,10,0));
+  }
+
+  strip.show();
+  delay(2000);
+  //gata
+  group.animation = &hide;
+  group.selection = &hideStrategy;
+  group.hidePercent = 20;*/
 }
 
 void loop() {
