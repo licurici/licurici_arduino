@@ -1,7 +1,7 @@
 #include "groupAnimation.h"
 
 
-Color currentColor = createColor(5, 10, 0);
+Color currentColor = createColor(0, 10, 5);
 
 void checkState(LedGroup* group, int i, int state) {
   if(group->reachedTarget(i)) {
@@ -54,10 +54,10 @@ void flicker(LedGroup* group) {
 }
 
 void flickerStrategy(LedGroup* group) {
-  group->selectionLen = 10;
+  group->selectionLen = min(10, group->length - 2);
 
   for(int i=0; i<group->selectionLen; i++) {
-    group->state[i] = 2;
+    group->state[i] = 4;
     
     group->increment[i][0] = 1;
     group->increment[i][1] = 1;
@@ -154,18 +154,8 @@ void roadStrategy(LedGroup* group) {
 void selectHideLed(LedGroup* group, int i) {
   int selected = random(0, group->length);
   int index = 0;
-  double countHidden = 0;
-  int percentHidden = 0;
-
-  for(int i=0; i<group->length; i++) {
-    if(group->isHidden(i)) {
-      countHidden++;
-    }
-  }
-
-  percentHidden = (countHidden / (double)group->length) * 100;
-  Serial.println(percentHidden);
-  if(percentHidden > group->hidePercent) {
+  
+  if(group->percentHidden() >= group->hidePercent) {
     group->waitFrames = 100;
     group->animationDone = true;
     return;
@@ -229,20 +219,12 @@ void hideStrategy(LedGroup* group) {
 void selectShowLed(LedGroup* group, int i) {
   int selected = random(0, group->length);
   int index = 0;
-  double countHidden = 0;
-  int percentHidden = 0;
-
-  for(int i=0; i<group->length; i++) {
-    if(group->isHidden(i)) {
-      countHidden++;
-    }
-  }
-
-  percentHidden = (countHidden / (double)group->length) * 100;
-  Serial.println(percentHidden);
-  if(percentHidden == 0) {
-    group->waitFrames = 100;
-    group->animationDone = true;
+  
+  if(group->percentHidden() == 0) {
+    group->animation = flicker;
+    group->selection = flickerStrategy;
+    group->counter = 0;
+    
     return;
   }
 
@@ -276,7 +258,7 @@ void showLed(LedGroup* group, int i) {
   byte g = min(Green(currentColor) + index, Green(currentColor));
   byte b = min(Blue(currentColor) + index, Blue(currentColor));
 
-  group->waitFrames = 500;
+  group->waitFrames = 100;
   group->targetColors[i] = createColor(r,g,b);
 }
 

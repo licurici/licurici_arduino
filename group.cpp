@@ -1,13 +1,24 @@
 #include "group.h"
 
-
-
-LedGroup::LedGroup(Adafruit_WS2801* strip, int start, int length) {
+void LedGroup::setup(Adafruit_WS2801* strip, int start, int length) {
   this->start = start;
   this->length = length;
   this->strip = strip;
 
   selectionLen = 0;
+}
+
+int LedGroup::percentHidden() {
+  double countHidden = 0;
+  int percentHidden = 0;
+
+  for(int i=0; i<length; i++) {
+    if(isHidden(i)) {
+      countHidden++;
+    }
+  }
+
+  return (countHidden / length) * 100;
 }
 
 
@@ -17,15 +28,17 @@ void LedGroup::animate() {
     return;
   }
   
-  if(counter == 0) {
+  if(counter == 0 && selection != NULL) {
     selection(this);
     counter++;
   }
 
-  animation(this);
+  if(animation != NULL) {
+    animation(this);
+  }
     
   for(int i=0; i<selectionLen; i++) {
-    Color color = strip->getPixelColor(selected[i]);
+    Color color = strip->getPixelColor(selected[i] + start);
     byte r = nextColor(Red(color), Red(targetColors[i]), increment[i][0]);
     byte g = nextColor(Green(color), Green(targetColors[i]), increment[i][0]);
     byte b = nextColor(Blue(color), Blue(targetColors[i]), increment[i][0]);
@@ -35,7 +48,7 @@ void LedGroup::animate() {
 }
 
 bool LedGroup::reachedTarget(byte index) {
-  Color color = strip->getPixelColor(selected[index]);
+  Color color = strip->getPixelColor(start + selected[index]);
 
   return color == targetColors[index];
 }

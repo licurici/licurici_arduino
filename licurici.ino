@@ -7,7 +7,18 @@ const uint8_t clockPin = 3;    // Green wire on Adafruit Pixels
 const int ledCount = 25;
 
 Adafruit_WS2801 strip = Adafruit_WS2801(ledCount, dataPin, clockPin);
-LedGroup group = LedGroup(&strip, 0, 25);
+
+#define TOTAL_GROUPS 2
+
+LedGroup groups[TOTAL_GROUPS];
+ 
+enum SerialAction {
+  showAction,
+  flickerAction,
+  roadAction,
+  hideAction,
+  unknownAction
+};
 
 void setup() {  
   delay(2000);
@@ -19,74 +30,125 @@ void setup() {
   // Update LED contents, to start they are all 'off'
   strip.show();
   
-  //group.animation = &flicker;
-  //group.selection = &flickerStrategy;
+  Serial.println("Setup strips"); 
+  groups[0].setup(&strip, 0, 10);
+  //groups[0].animation = &flicker;
+  //groups[0].selection = &flickerStrategy;
 
-  //group.animation = &road;
-  //group.selection = &roadStrategy;
+  groups[1].setup(&strip, 10, 15);
+  groups[1].animation = &flicker;
+  groups[1].selection = &flickerStrategy;
 
-  /*
-  //pt debug
-  for(int i = 0; i<25; i++) {
-    strip.setPixelColor(i, createColor(5,10,0));
-  }
-
-  strip.show();
-  delay(2000);
-  //gata
-  group.animation = &hide;
-  group.selection = &hideStrategy;
-  group.hidePercent = 20;*/
-
-  group.animation = &show;
-  group.selection = &showStrategy;  
+  
+  Serial.println("Start loop"); 
 }
 
 void loop() {
-
-  group.animate();
+  for(int i=0; i<TOTAL_GROUPS; i++)
+    groups[i].animate();
+  
   strip.show();
+
   delay(20);
+  
+  SerialAction action = unknownAction;
 
-}
-/*
-int* selectRandomPixels() {
+  if(Serial.available() > 0) {
+    Serial.println("\n\nparse command");  
+    action = intToAction(Serial.parseInt());
 
-  int* pixels = (int*) malloc(sizeof(int) * 5);
-
-  for(int i = 0; i<5; i++) {
-    pixels[i] = random(0, ledCount);
+    if(action == unknownAction) {
+      Serial.println("Unknown command");  
+    }
   }
 
-  return pixels;  
+  if(action != unknownAction) {
+    performAction(action);
+    action = unknownAction;
+  }
 }
 
-void showFireflies() {
+void performAction(SerialAction action) {
+    int nr;
+    Serial.setTimeout(5000);
+    
+    switch(action) {
+      case showAction:
+        Serial.println("Select show group");  
+        nr = Serial.parseInt();
 
-    int* pixels = selectRandomPixels();
+        groups[nr].animation = &show;
+        groups[nr].selection = &showStrategy;
+        groups[nr].counter = 0;
+        groups[nr].waitFrames = 0;
+        
+        break;
+        
+      case flickerAction:
+        Serial.println("Select flicker group");  
+        nr = Serial.parseInt();
+        
+        groups[nr].animation = &flicker;
+        groups[nr].selection = &flickerStrategy;
+        groups[nr].counter = 0;
+        groups[nr].waitFrames = 0;
+        
+        break;
+        
+      case roadAction:
+        Serial.println("Select road group");   
+        nr = Serial.parseInt();
 
-    for(int i=0; i<50; i++) {
-      for(int j=0; j<5; j++) {
-        uint32_t currentColor = strip.getPixelColor(pixels[j]);
-  
-        byte r = Red(currentColor);
-        byte g = Green(currentColor);
-        byte b = Blue(currentColor);
- 
-        if(r < desiredRed) r++;
-        if(g < desiredGreen) g++;
-        if(b < desiredBlue) b++;
-  
-        Serial.print("=>");
-        Serial.println(r);
-  
-        strip.setPixelColor(pixels[j], Color(r, g, b));
-      }
-      
-      delay(20);
-      strip.show();
+        groups[nr].animation = &road;
+        groups[nr].selection = &roadStrategy;
+        groups[nr].counter = 0;
+        groups[nr].waitFrames = 0;
+        
+        break;
+
+        break;
+        
+      case hideAction:
+        Serial.println("Select hide group");  
+        nr = Serial.parseInt();
+
+        Serial.println("Select hide percent");  
+        groups[nr].hidePercent = Serial.parseInt();
+
+        groups[nr].animation = &hide;
+        groups[nr].selection = &hideStrategy;
+        groups[nr].counter = 0;
+        groups[nr].waitFrames = 0;
+
+        break;
+
+      default:
+        break;
     }
 
-    free(pixels);
+  Serial.println("Done");
+  while(Serial.available() > 0) Serial.read(); 
+  Serial.setTimeout(50);
 }
-*/
+
+SerialAction intToAction(int value) {
+  switch(value) {
+    case 0:
+      return showAction;
+
+    case 1:
+      return flickerAction;
+
+    case 2:
+      return roadAction;
+
+    case 3:
+      return hideAction;
+
+    default:
+      break;
+  }
+
+  return unknownAction;
+}
+

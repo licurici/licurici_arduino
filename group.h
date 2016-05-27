@@ -12,7 +12,7 @@ typedef void (* SelectionStrategy) (LedGroup* group);
 class LedGroup {
 
   public:
-    LedGroup(Adafruit_WS2801* strip, int start, int length);
+    void setup(Adafruit_WS2801* strip, int start, int length);
 
     void animate();
 
@@ -23,6 +23,8 @@ class LedGroup {
     Adafruit_WS2801* strip;
     int start;
     int length;
+
+    int percentHidden();
 
     bool reachedTarget(byte);
     bool isSelected(byte);
@@ -39,9 +41,7 @@ class LedGroup {
     int selectionLen;
     
     int hidePercent;
-
-    private:
-      byte counter;
+    byte counter;
 };
 
 
