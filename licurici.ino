@@ -1,12 +1,15 @@
-#include <Adafruit_WS2801.h>
+//#include <Adafruit_WS2801.h>
+
 #include "group.h"
 #include "groupAnimation.h"
 
 const uint8_t dataPin  = 2;    // Yellow wire on Adafruit Pixels
 const uint8_t clockPin = 3;    // Green wire on Adafruit Pixels
-const int ledCount = 25;
 
-Adafruit_WS2801 strip = Adafruit_WS2801(ledCount, dataPin, clockPin);
+//Adafruit_WS2801 strip = Adafruit_WS2801(ledCount, dataPin, clockPin);
+
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(100, 2, NEO_RGB + NEO_KHZ800);
+ 
 
 #define TOTAL_GROUPS 2
 
@@ -17,6 +20,7 @@ enum SerialAction {
   flickerAction,
   roadAction,
   hideAction,
+  colorAction,
   unknownAction
 };
 
@@ -31,13 +35,28 @@ void setup() {
   strip.show();
   
   Serial.println("Setup strips"); 
-  groups[0].setup(&strip, 0, 10);
-  //groups[0].animation = &flicker;
-  //groups[0].selection = &flickerStrategy;
+  groups[0].setup(&strip, 0, 50);
+  groups[0].animation = &flicker;
+  groups[0].selection = &flickerStrategy;
 
-  groups[1].setup(&strip, 10, 15);
+  groups[1].setup(&strip, 50, 50);
   groups[1].animation = &flicker;
   groups[1].selection = &flickerStrategy;
+/*
+  groups[2].setup(&strip, 100, 50);
+  groups[2].animation = &flicker;
+  groups[2].selection = &flickerStrategy;
+
+  groups[3].setup(&strip, 150, 50);
+  groups[3].animation = &flicker;
+  groups[3].selection = &flickerStrategy;
+
+
+  
+/*
+  groups[1].setup(&strip, 10, 15);
+  groups[1].animation = &flicker;
+  groups[1].selection = &flickerStrategy;*/
 
   
   Serial.println("Start loop"); 
@@ -70,6 +89,10 @@ void loop() {
 
 void performAction(SerialAction action) {
     int nr;
+    byte red;
+    byte green;
+    byte blue;
+    
     Serial.setTimeout(5000);
     
     switch(action) {
@@ -121,6 +144,20 @@ void performAction(SerialAction action) {
         groups[nr].waitFrames = 0;
 
         break;
+      
+      case colorAction:
+        Serial.println("red");  
+        red = Serial.parseInt();
+
+        Serial.println("green");  
+        green = Serial.parseInt();
+        
+        Serial.println("blue");  
+        blue = Serial.parseInt();
+        
+        setCurrentColor(createColor(red, green, blue));
+
+        break;
 
       default:
         break;
@@ -144,6 +181,9 @@ SerialAction intToAction(int value) {
 
     case 3:
       return hideAction;
+
+    case 4:
+      return colorAction;
 
     default:
       break;

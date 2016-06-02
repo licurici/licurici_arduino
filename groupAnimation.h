@@ -3,6 +3,8 @@
 
 #include "group.h"
 
+void setCurrentColor(Color color);
+
 void flicker(LedGroup* group);
 void flickerStrategy(LedGroup* group);
 

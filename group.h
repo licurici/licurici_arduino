@@ -1,7 +1,10 @@
 #ifndef __LedGroup__
 #define __LedGroup__
 
-#include <Adafruit_WS2801.h>
+//#include <Adafruit_WS2801.h>
+
+#include <Adafruit_NeoPixel.h>
+
 #include "color.h"
 
 class LedGroup;
@@ -12,7 +15,7 @@ typedef void (* SelectionStrategy) (LedGroup* group);
 class LedGroup {
 
   public:
-    void setup(Adafruit_WS2801* strip, int start, int length);
+    void setup(Adafruit_NeoPixel* strip, int start, int length);
 
     void animate();
 
@@ -20,7 +23,9 @@ class LedGroup {
     SelectionStrategy selection;
     int waitFrames;
 
-    Adafruit_WS2801* strip;
+    //Adafruit_WS2801* strip;
+    
+    Adafruit_NeoPixel* strip;
     int start;
     int length;
 

@@ -3,6 +3,10 @@
 
 Color currentColor = createColor(0, 10, 5);
 
+void setCurrentColor(Color color) {
+  currentColor = color;
+}
+
 void checkState(LedGroup* group, int i, int state) {
   if(group->reachedTarget(i)) {
     group->state[state]++;

@@ -1,6 +1,6 @@
 #include "group.h"
 
-void LedGroup::setup(Adafruit_WS2801* strip, int start, int length) {
+void LedGroup::setup(Adafruit_NeoPixel* strip, int start, int length) {
   this->start = start;
   this->length = length;
   this->strip = strip;
