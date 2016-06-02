@@ -1,3 +1,7 @@
+#include <Adafruit_NeoPixel.h>
+
+#include <Adafruit_WS2801.h>
+
 //#include <Adafruit_WS2801.h>
 
 #include "group.h"
@@ -23,6 +27,10 @@ enum SerialAction {
   colorAction,
   unknownAction
 };
+
+const int audioPin = A0;
+const int soundAverage = 300;
+const int soundThreshold = 60;
 
 void setup() {  
   delay(2000);
@@ -62,7 +70,19 @@ void setup() {
   Serial.println("Start loop"); 
 }
 
+void audioLoop() {
+  int sensorValue = abs(analogRead(audioPin)- soundAverage);
+
+  if(sensorValue > soundThreshold) {
+    Serial.print("Sounds detected ");
+    Serial.println(sensorValue);
+  }
+}
+
 void loop() {
+
+  audioLoop();
+  
   for(int i=0; i<TOTAL_GROUPS; i++)
     groups[i].animate();
   
