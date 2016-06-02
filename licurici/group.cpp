@@ -69,3 +69,8 @@ bool LedGroup::isHidden(byte index) {
 Color LedGroup::getColor(byte index) {  
   return strip->getPixelColor(start + index);
 }
+
+bool LedGroup::isAnimation(Animation animation) {
+  return animation == this->animation;
+}
+

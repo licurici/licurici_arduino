@@ -76,6 +76,34 @@ void audioLoop() {
   if(sensorValue > soundThreshold) {
     Serial.print("Sounds detected ");
     Serial.println(sensorValue);
+
+    int percent = min(100, sensorValue - soundThreshold);
+
+    
+    Serial.print("Hide ");
+    Serial.println(percent);
+    
+    for(int i=0; i<TOTAL_GROUPS; i++)
+    {
+      groups[i].animation = &hide;
+      groups[i].selection = &hideStrategy;
+      groups[i].counter = 0;
+      groups[i].waitFrames = 0;
+      groups[i].hidePercent = percent;
+      groups[i].animationDone = false;
+    }
+  }
+  else {
+     for(int i=0; i<TOTAL_GROUPS; i++)
+    {
+      if(groups[i].isAnimation(&hide) && groups[i].animationDone) 
+      {
+        groups[i].animation = &show;
+        groups[i].selection = &showStrategy;
+        groups[i].counter = 0;
+        groups[i].waitFrames = 0;
+      }
+    }
   }
 }
 
@@ -99,11 +127,11 @@ void loop() {
     if(action == unknownAction) {
       Serial.println("Unknown command");  
     }
-  }
-
-  if(action != unknownAction) {
-    performAction(action);
-    action = unknownAction;
+ 
+    if(action != unknownAction) {
+      performAction(action);
+      action = unknownAction;
+    }
   }
 }
 

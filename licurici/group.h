@@ -34,6 +34,7 @@ class LedGroup {
     bool reachedTarget(byte);
     bool isSelected(byte);
     bool isHidden(byte);
+    bool isAnimation(Animation);
 
     bool animationDone;
     
