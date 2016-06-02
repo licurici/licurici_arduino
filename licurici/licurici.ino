@@ -71,15 +71,17 @@ void setup() {
 }
 
 void audioLoop() {
-  int sensorValue = abs(analogRead(audioPin)- soundAverage);
+  int readValue = analogRead(audioPin);
+  int sensorValue = abs(readValue- soundAverage);
 
   if(sensorValue > soundThreshold) {
+    randomSeed(readValue);
+
     Serial.print("Sounds detected ");
     Serial.println(sensorValue);
 
     int percent = min(100, sensorValue - soundThreshold);
 
-    
     Serial.print("Hide ");
     Serial.println(percent);
     
