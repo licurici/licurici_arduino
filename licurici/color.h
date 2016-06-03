@@ -15,3 +15,4 @@ byte Red(Color color);
 byte nextColor(byte current, byte target, byte step);
 
 #endif // __color__
+

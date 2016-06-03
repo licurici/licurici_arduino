@@ -29,7 +29,7 @@ enum SerialAction {
 };
 
 const int audioPin = A0;
-const int soundAverage = 310;
+const int soundAverage = 340;
 const int soundThreshold = 40;
 
 void setup() {  
@@ -78,7 +78,7 @@ void audioLoop() {
     randomSeed(readValue);
 
     Serial.print("Sounds detected ");
-    Serial.println(sensorValue);
+    Serial.println(sensorValue - soundThreshold);
 
     int percent = min(100, sensorValue - soundThreshold);
 
@@ -100,13 +100,16 @@ void audioLoop() {
     {
       if(groups[i].isAnimation(&hide) && groups[i].animationDone) 
       {
+        Serial.print("Show group ");
+        Serial.println(i);
+    
         groups[i].animation = &show;
         groups[i].selection = &showStrategy;
         groups[i].counter = 0;
         groups[i].waitFrames = 100;
       }
 
-      if(!groups[i].isAnimation(&hide) && groups[i].waitFrames == 0) {
+      if(!groups[i].isAnimation(&show) && groups[i].waitFrames == 0) {
         groups[i].hidePercent = max(1, groups[i].hidePercent - 1);
       }
     }
@@ -245,4 +248,5 @@ SerialAction intToAction(int value) {
 
   return unknownAction;
 }
+
 

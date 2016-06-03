@@ -20,3 +20,4 @@ void showStrategy(LedGroup* group);
 
 
 #endif // __GroupAnimation__
+

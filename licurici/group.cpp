@@ -38,12 +38,14 @@ void LedGroup::animate() {
   }
     
   for(int i=0; i<selectionLen; i++) {
-    Color color = strip->getPixelColor(selected[i] + start);
-    byte r = nextColor(Red(color), Red(targetColors[i]), increment[i][0]);
-    byte g = nextColor(Green(color), Green(targetColors[i]), increment[i][0]);
-    byte b = nextColor(Blue(color), Blue(targetColors[i]), increment[i][0]);
-
-    strip->setPixelColor(selected[i] + start, createColor(r, g, b));
+    if(selected[i] > 4) {
+      Color color = strip->getPixelColor(selected[i] + start);
+      byte r = nextColor(Red(color), Red(targetColors[i]), increment[i][0]);
+      byte g = nextColor(Green(color), Green(targetColors[i]), increment[i][0]);
+      byte b = nextColor(Blue(color), Blue(targetColors[i]), increment[i][0]);
+  
+      strip->setPixelColor(selected[i] + start, createColor(r, g, b));
+    }
   }
 }
 
@@ -73,4 +75,5 @@ Color LedGroup::getColor(byte index) {
 bool LedGroup::isAnimation(Animation animation) {
   return animation == this->animation;
 }
+
 

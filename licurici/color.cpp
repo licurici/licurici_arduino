@@ -40,3 +40,4 @@ byte nextColor(byte current, byte target, byte step) {
    return max(current - step, target);  
 }
 
+
