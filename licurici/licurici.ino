@@ -29,8 +29,8 @@ enum SerialAction {
 };
 
 const int audioPin = A0;
-const int soundAverage = 300;
-const int soundThreshold = 60;
+const int soundAverage = 310;
+const int soundThreshold = 40;
 
 void setup() {  
   delay(2000);
@@ -91,19 +91,23 @@ void audioLoop() {
       groups[i].selection = &hideStrategy;
       groups[i].counter = 0;
       groups[i].waitFrames = 0;
-      groups[i].hidePercent = percent;
+      groups[i].hidePercent = min(groups[i].hidePercent + percent, 100);
       groups[i].animationDone = false;
     }
   }
   else {
-     for(int i=0; i<TOTAL_GROUPS; i++)
+    for(int i=0; i<TOTAL_GROUPS; i++)
     {
       if(groups[i].isAnimation(&hide) && groups[i].animationDone) 
       {
         groups[i].animation = &show;
         groups[i].selection = &showStrategy;
         groups[i].counter = 0;
-        groups[i].waitFrames = 0;
+        groups[i].waitFrames = 100;
+      }
+
+      if(!groups[i].isAnimation(&hide) && groups[i].waitFrames == 0) {
+        groups[i].hidePercent = max(1, groups[i].hidePercent - 1);
       }
     }
   }
