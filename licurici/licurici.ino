@@ -10,10 +10,7 @@
 const uint8_t dataPin  = 2;    // Yellow wire on Adafruit Pixels
 const uint8_t clockPin = 3;    // Green wire on Adafruit Pixels
 
-//Adafruit_WS2801 strip = Adafruit_WS2801(ledCount, dataPin, clockPin);
-
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(100, 2, NEO_RGB + NEO_KHZ800);
- 
 
 #define TOTAL_GROUPS 2
 
@@ -32,13 +29,33 @@ const int audioPin = A0;
 const int soundAverage = 340;
 const int soundThreshold = 40;
 
+
+const int LightPin = 3;
+volatile unsigned long LightCnt = 0;
+unsigned long oldLightCnt = 0;
+unsigned long LightT = 0;
+unsigned long LightLast;
+unsigned long lightValue;
+
+const unsigned long lightThreshold = 100;
+
+
+void irq1()
+{
+  LightCnt++;
+}
+
 void setup() {  
   delay(2000);
 
   Serial.begin(9600);
 
-  strip.begin();
+  pinMode(LightPin, INPUT);
+  digitalWrite(LightPin, HIGH);
+  attachInterrupt(0, irq1, RISING);
 
+  strip.begin();
+  
   // Update LED contents, to start they are all 'off'
   strip.show();
   
@@ -77,13 +94,14 @@ void audioLoop() {
   if(sensorValue > soundThreshold) {
     randomSeed(readValue);
 
-    Serial.print("Sounds detected ");
+    Serial.print("SoundDetected ");
     Serial.println(sensorValue - soundThreshold);
 
     int percent = min(100, sensorValue - soundThreshold);
 
-    Serial.print("Hide ");
-    Serial.println(percent);
+    Serial.print("Hiding ");
+    Serial.print(percent);
+    Serial.println("% leds");
     
     for(int i=0; i<TOTAL_GROUPS; i++)
     {
@@ -106,7 +124,6 @@ void audioLoop() {
         groups[i].animation = &show;
         groups[i].selection = &showStrategy;
         groups[i].counter = 0;
-        groups[i].waitFrames = 100;
       }
 
       if(!groups[i].isAnimation(&show) && groups[i].waitFrames == 0) {
@@ -116,9 +133,25 @@ void audioLoop() {
   }
 }
 
+void lightLoop() {
+  if (millis() - LightLast > 1000)
+  {
+    LightLast = millis();
+    LightT = LightCnt;
+    unsigned long hz = LightT - oldLightCnt;
+    oldLightCnt = LightT;
+    lightValue = (hz+50)/100;
+  }
+}
+
 void loop() {
 
   audioLoop();
+  lightLoop();
+
+  if(lightThreshold > lightValue) {
+    return;
+  }
   
   for(int i=0; i<TOTAL_GROUPS; i++)
     groups[i].animate();
