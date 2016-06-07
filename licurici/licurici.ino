@@ -22,13 +22,14 @@ enum SerialAction {
   roadAction,
   hideAction,
   colorAction,
+  reportAction,
   unknownAction
 };
 
 const int audioPin = A0;
 const int soundAverage = 340;
 const int soundThreshold = 40;
-
+int soundValue;
 
 const int LightPin = 3;
 volatile unsigned long LightCnt = 0;
@@ -37,7 +38,7 @@ unsigned long LightT = 0;
 unsigned long LightLast;
 unsigned long lightValue;
 
-const unsigned long lightThreshold = 100;
+const unsigned long lightThreshold = 160;
 
 
 void irq1()
@@ -89,15 +90,15 @@ void setup() {
 
 void audioLoop() {
   int readValue = analogRead(audioPin);
-  int sensorValue = abs(readValue- soundAverage);
+  soundValue = abs(readValue- soundAverage);
 
-  if(sensorValue > soundThreshold) {
+  if(soundValue > soundThreshold) {
     randomSeed(readValue);
 
     Serial.print("SoundDetected ");
-    Serial.println(sensorValue - soundThreshold);
+    Serial.println(soundValue - soundThreshold);
 
-    int percent = min(100, sensorValue - soundThreshold);
+    int percent = min(100, soundValue - soundThreshold);
 
     Serial.print("Hiding ");
     Serial.print(percent);
@@ -149,12 +150,12 @@ void loop() {
   audioLoop();
   lightLoop();
 
-  if(lightThreshold > lightValue) {
-    return;
+
+  for(int i=0; i<TOTAL_GROUPS; i++) {
+    if(lightThreshold >= lightValue || groups[i].isAnimation(&hide) ) {
+      groups[i].animate();
+    }
   }
-  
-  for(int i=0; i<TOTAL_GROUPS; i++)
-    groups[i].animate();
   
   strip.show();
 
@@ -182,6 +183,7 @@ void performAction(SerialAction action) {
     byte red;
     byte green;
     byte blue;
+    Color currentColor;
     
     Serial.setTimeout(5000);
     
@@ -249,6 +251,59 @@ void performAction(SerialAction action) {
 
         break;
 
+      case reportAction: 
+        currentColor = getCurrentColor();
+
+        Serial.println("BEGIN REPORT");
+
+        Serial.print("current color ");
+        Serial.print(Red(currentColor));
+        Serial.print(" ");
+        Serial.print(Green(currentColor));
+        Serial.print(" ");
+        Serial.println(Blue(currentColor));
+  
+        Serial.print("light sensor ");
+        Serial.print(lightValue);
+        Serial.println(" mW/m2");
+        
+        Serial.print("light threshold ");
+        Serial.println(lightThreshold);
+
+        Serial.print("audio sensor ");
+        Serial.println(soundValue);
+        
+        Serial.print("audio threshold ");
+        Serial.println(soundThreshold);
+        
+        Serial.print("groups ");
+        Serial.println(TOTAL_GROUPS);
+
+        Serial.print("leds ");
+        Serial.println(strip.numPixels());
+
+        for(int i=0; i<TOTAL_GROUPS; i++) {
+          Serial.print("Group ");
+          Serial.println(i);
+
+          Serial.print(" leds ");
+          Serial.println(groups[i].length);
+          
+          Serial.print(" start at ");
+          Serial.println(groups[i].start);
+
+          Serial.print(" visible ");
+          Serial.print(100 - groups[i].percentHidden());
+          Serial.println("%");
+
+          Serial.print(" animation ");
+          Serial.println(stringAnimation(&groups[i]));
+        }
+        
+        Serial.println("END REPORT");
+        
+        
+        break;
       default:
         break;
     }
@@ -274,6 +329,9 @@ SerialAction intToAction(int value) {
 
     case 4:
       return colorAction;
+
+    case 5:
+      return reportAction;
 
     default:
       break;

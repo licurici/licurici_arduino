@@ -4,6 +4,7 @@
 #include "group.h"
 
 void setCurrentColor(Color color);
+Color getCurrentColor();
 
 void flicker(LedGroup* group);
 void flickerStrategy(LedGroup* group);
@@ -17,6 +18,7 @@ void hideStrategy(LedGroup* group);
 void show(LedGroup* group);
 void showStrategy(LedGroup* group);
 
+char* stringAnimation(LedGroup* group);
 
 
 #endif // __GroupAnimation__

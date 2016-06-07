@@ -7,6 +7,10 @@ void setCurrentColor(Color color) {
   currentColor = color;
 }
 
+Color getCurrentColor() {
+  return currentColor;
+}
+
 void checkState(LedGroup* group, int i, int state) {
   if(group->reachedTarget(i)) {
     group->state[state]++;
@@ -295,6 +299,27 @@ void showStrategy(LedGroup* group) {
 
     group->state[i] = 2;
   }
+}
+
+char* stringAnimation(LedGroup* group) {
+
+  if(group->animation == hide) {
+    return "hide";
+  }
+
+  if(group->animation == show) {
+    return "show";
+  }
+
+  if(group->animation == road) {
+    return "road";
+  }
+
+  if(group->animation == flicker) {
+    return "flicker";
+  }
+
+  return "unknown";
 }
 
 
