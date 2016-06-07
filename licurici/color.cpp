@@ -29,15 +29,16 @@ byte Red(uint32_t color)
 }
 
 byte nextColor(byte current, byte target, byte step) {
-  if(current == target) {
-    return current;
-  }
-
-  if(current < target) {
+ 
+  if(current < target && current + step > current) {
     return min(current + step, target);  
   }
+
+  if(current > target && current - step < current) {
+    return max(current - step, target);  
+  }
   
-   return max(current - step, target);  
+  return current;
 }
 
 

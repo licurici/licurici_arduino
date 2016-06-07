@@ -262,6 +262,7 @@ void performAction(SerialAction action) {
         Serial.print(Green(currentColor));
         Serial.print(" ");
         Serial.println(Blue(currentColor));
+        Serial.println("");
   
         Serial.print("light sensor ");
         Serial.print(lightValue);
@@ -269,18 +270,21 @@ void performAction(SerialAction action) {
         
         Serial.print("light threshold ");
         Serial.println(lightThreshold);
+        Serial.println("");
 
         Serial.print("audio sensor ");
         Serial.println(soundValue);
         
         Serial.print("audio threshold ");
         Serial.println(soundThreshold);
+        Serial.println("");
         
         Serial.print("groups ");
         Serial.println(TOTAL_GROUPS);
 
         Serial.print("leds ");
         Serial.println(strip.numPixels());
+        Serial.println("");
 
         for(int i=0; i<TOTAL_GROUPS; i++) {
           Serial.print("Group ");
@@ -298,6 +302,7 @@ void performAction(SerialAction action) {
 
           Serial.print(" animation ");
           Serial.println(stringAnimation(&groups[i]));
+          Serial.println("");
         }
         
         Serial.println("END REPORT");
