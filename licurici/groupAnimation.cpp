@@ -302,6 +302,16 @@ void showStrategy(LedGroup* group) {
   }
 }
 
+
+void happy(LedGroup* group) {
+
+}
+
+
+void happyStrategy(LedGroup* group) {
+  
+}
+
 char* stringAnimation(LedGroup* group) {
 
   if(group->animation == hide) {
@@ -322,5 +332,7 @@ char* stringAnimation(LedGroup* group) {
 
   return "unknown";
 }
+
+
 
 

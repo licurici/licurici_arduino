@@ -21,6 +21,7 @@ enum SerialAction {
   flickerAction,
   roadAction,
   hideAction,
+  happyAction,
   colorAction,
   reportAction,
   unknownAction
@@ -66,7 +67,7 @@ void setup() {
   strip.show();
   
   Serial.println("Setup strips"); 
-  groups[0].setup(&strip, 0, 50);
+  groups[0].setup(&strip, 1, 50);
   groups[0].animation = &flicker;
   groups[0].selection = &flickerStrategy;
 
@@ -91,7 +92,19 @@ void setup() {
 
   
   Serial.println("Start loop"); 
+  
+  //colorWipe(strip.Color(255, 0, 0), 50); // Red
+  
 }
+
+void colorWipe(uint32_t c, uint8_t wait) {
+  for(uint16_t i=0; i<strip.numPixels(); i++) {
+    strip.setPixelColor(i, c);
+    strip.show();
+    delay(wait);
+  }
+}
+
 
 void hideGroup(int i, int percent) {
   if(groups[i].isAnimation(&hide) || groups[i].isAnimation(&road)) {
@@ -166,8 +179,8 @@ void lightLoop() {
 
 void loop() {
 
-  audioLoop();
-  lightLoop();
+  //audioLoop();
+  //lightLoop();
 
   if(millis() - oldTime >= 20) {
     
@@ -253,6 +266,17 @@ void performAction(SerialAction action) {
 
         groups[nr].animation = &hide;
         groups[nr].selection = &hideStrategy;
+        groups[nr].counter = 0;
+        groups[nr].waitFrames = 0;
+
+        break;
+
+      case happyAction:
+        Serial.println("Select happy group");  
+        nr = Serial.parseInt();
+
+        groups[nr].animation = &happy;
+        groups[nr].selection = &happyStrategy;
         groups[nr].counter = 0;
         groups[nr].waitFrames = 0;
 
@@ -351,12 +375,15 @@ SerialAction intToAction(int value) {
       return roadAction;
 
     case 3:
-      return hideAction;
+      return happyAction;
 
     case 4:
-      return colorAction;
+      return hideAction;
 
     case 5:
+      return colorAction;
+
+    case 6:
       return reportAction;
 
     default:

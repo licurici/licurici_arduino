@@ -15,6 +15,9 @@ void roadStrategy(LedGroup* group);
 void hide(LedGroup* group);
 void hideStrategy(LedGroup* group);
 
+void happy(LedGroup* group);
+void happyStrategy(LedGroup* group);
+
 void show(LedGroup* group);
 void showStrategy(LedGroup* group);
 
