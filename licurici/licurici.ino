@@ -12,7 +12,7 @@ const uint8_t clockPin = 3;    // Green wire on Adafruit Pixels
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(100, 2, NEO_RGB + NEO_KHZ800);
 
-#define TOTAL_GROUPS 2
+#define TOTAL_GROUPS 4
 
 LedGroup groups[TOTAL_GROUPS];
  
@@ -24,6 +24,7 @@ enum SerialAction {
   happyAction,
   colorAction,
   reportAction,
+  allHappyAction,
   unknownAction
 };
 
@@ -67,44 +68,25 @@ void setup() {
   strip.show();
   
   Serial.println("Setup strips"); 
-  groups[0].setup(&strip, 1, 50);
-  groups[0].animation = &flicker;
-  groups[0].selection = &flickerStrategy;
+  groups[0].setup(&strip, 0, 50);
+  groups[0].animation = &happy;
+  groups[0].selection = &happyStrategy;
 
   groups[1].setup(&strip, 50, 50);
-  groups[1].animation = &flicker;
-  groups[1].selection = &flickerStrategy;
-/*
+  groups[1].animation = &happy;
+  groups[1].selection = &happyStrategy;
+
   groups[2].setup(&strip, 100, 50);
-  groups[2].animation = &flicker;
-  groups[2].selection = &flickerStrategy;
+  groups[2].animation = &happy;
+  groups[2].selection = &happyStrategy;
 
   groups[3].setup(&strip, 150, 50);
-  groups[3].animation = &flicker;
-  groups[3].selection = &flickerStrategy;
-
-
-  
-/*
-  groups[1].setup(&strip, 10, 15);
-  groups[1].animation = &flicker;
-  groups[1].selection = &flickerStrategy;*/
+  groups[3].animation = &happy;
+  groups[3].selection = &happyStrategy;
 
   
   Serial.println("Start loop"); 
-  
-  //colorWipe(strip.Color(255, 0, 0), 50); // Red
-  
 }
-
-void colorWipe(uint32_t c, uint8_t wait) {
-  for(uint16_t i=0; i<strip.numPixels(); i++) {
-    strip.setPixelColor(i, c);
-    strip.show();
-    delay(wait);
-  }
-}
-
 
 void hideGroup(int i, int percent) {
   if(groups[i].isAnimation(&hide) || groups[i].isAnimation(&road)) {
@@ -185,7 +167,7 @@ void loop() {
   if(millis() - oldTime >= 20) {
     
     for(int i=0; i<TOTAL_GROUPS; i++) {
-      if(lightThreshold >= lightValue || groups[i].isAnimation(&hide) ) {
+      if(lightThreshold >= lightValue || groups[i].isAnimation(&hide) || groups[i].isAnimation(&happy) ) {
         groups[i].animate();
       }
     }
@@ -281,7 +263,19 @@ void performAction(SerialAction action) {
         groups[nr].waitFrames = 0;
 
         break;
-      
+        
+      case allHappyAction:
+        for(int i=0;i<TOTAL_GROUPS; i++) {
+          if(!groups[i].isAnimation(&road)) {
+            groups[i].animation = &happy;
+            groups[i].selection = &happyStrategy;
+            groups[i].counter = 0;
+            groups[i].waitFrames = 0;
+          }
+        }
+        break;
+
+       
       case colorAction:
         Serial.println("red");  
         red = Serial.parseInt();
@@ -295,7 +289,7 @@ void performAction(SerialAction action) {
         setCurrentColor(createColor(red, green, blue));
 
         break;
-
+    
       case reportAction: 
         currentColor = getCurrentColor();
 
@@ -386,6 +380,9 @@ SerialAction intToAction(int value) {
     case 6:
       return reportAction;
 
+    case 7: 
+      return allHappyAction;
+  
     default:
       break;
   }

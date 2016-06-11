@@ -46,7 +46,11 @@ void LedGroup::animate() {
     byte g = nextColor(Green(color), Green(targetColors[i]), increment[i][0]);
     byte b = nextColor(Blue(color), Blue(targetColors[i]), increment[i][0]);
 
-    strip->setPixelColor(selected[i] + start, createColor(r, g, b));
+    int index = selected[i] + start;
+
+    if(index < start + length) {
+      strip->setPixelColor(index, createColor(r, g, b));
+    }
   }
 }
 

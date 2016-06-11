@@ -1,6 +1,5 @@
 #include "groupAnimation.h"
 
-
 Color currentColor = createColor(0, 10, 5);
 
 void setCurrentColor(Color color) {
@@ -21,7 +20,7 @@ void flickerSelectColor(LedGroup* group, int i) {
   byte r = Red(currentColor) * random(2, 5);
   byte g = Green(currentColor) * random(2, 5);
   byte b = Blue(currentColor) * random(2, 5);
-  
+
   group->targetColors[i] = createColor(r,g,b);
 }
 
@@ -30,7 +29,6 @@ void selectFlickerLeds(LedGroup* group, int i) {
 
   while(group->isSelected(selected)) {
     selected = random(0, group->length);
-    Serial.println(selected);
   }
     
   group->selected[i] = selected;
@@ -98,11 +96,13 @@ void nextRoad(LedGroup* group) {
   }
 }
 
-void road(LedGroup* group) {
-
-  switch(group->state[0]) {
+void roadAnimation(LedGroup* group, int wait, Color color1, Color color2) {
+  
+    //Serial.println(group->state[0]);
+      
+    switch(group->state[0]) {
     case 0:
-      group->targetColors[0] = currentColor;
+      group->targetColors[0] = color1;
       group->state[0]++;
       break;
 
@@ -111,8 +111,8 @@ void road(LedGroup* group) {
       break;
 
     case 2:
-      group->targetColors[0] = createColor(0,0,0);
-      group->targetColors[1] = currentColor;
+      group->targetColors[0] = color2;
+      group->targetColors[1] = color1;
       group->state[0]++;
       break;
     
@@ -121,8 +121,8 @@ void road(LedGroup* group) {
       break;
       
     case 4:
-      group->targetColors[1] = createColor(0,0,0);
-      group->targetColors[2] = currentColor;
+      group->targetColors[1] = color2;
+      group->targetColors[2] = color1;
       group->state[0]++;
       break;
     
@@ -131,7 +131,7 @@ void road(LedGroup* group) {
       break;
 
     case 6:
-      group->targetColors[2] = createColor(0,0,0);
+      group->targetColors[2] = color2;
       group->state[0]++;
       break;
 
@@ -140,10 +140,14 @@ void road(LedGroup* group) {
       break;
       
     default:
-      group->waitFrames = 50;
+      group->waitFrames = wait;
       nextRoad(group);
       group->state[0] = 0;
   }
+}
+
+void road(LedGroup* group) {
+  roadAnimation(group, 0, currentColor, createColor(0,0,0));
 }
 
 void roadStrategy(LedGroup* group) {
@@ -157,6 +161,101 @@ void roadStrategy(LedGroup* group) {
     group->increment[i][0] = 3;
     group->increment[i][1] = 3;
     group->increment[i][2] = 3;
+  }
+}
+
+int nextUnselected(LedGroup* group) {
+  int last = 0;
+  
+  for(int i=0;i<group->selectionLen; i++) {
+    if(group->selected[i] > last) {
+      last = group->selected[i];
+    }
+  }
+
+  return last + 1;
+}
+
+int firstUnselected(LedGroup* group) {
+  int first = 100;
+  
+  for(int i=0;i<group->selectionLen; i++) {
+    if(group->selected[i] < first) {
+      first = group->selected[i];
+    }
+  }
+
+  return first - 1;
+}
+
+void happy(LedGroup* group) {
+  byte r = Red(currentColor);
+  byte g = Green(currentColor);
+  byte b = Blue(currentColor);
+
+  Color highColor1 = createColor(r * 2, g * 2, b * 2);
+  Color highColor2 = createColor(r * 5, g * 5, b * 5);
+
+  for(int i=0;i<group->selectionLen; i++) {
+  switch(group->state[i]) {
+    case 0:
+      group->targetColors[i] = highColor1;
+      group->state[i]++;
+      break;
+    
+    case 1:
+      checkState(group, i, i);
+      break;
+
+    case 2:
+      if(i == group->selectionLen - 1 && group->selectionLen < 10) {
+        group->selected[group->selectionLen] = nextUnselected(group);
+        group->state[group->selectionLen] = 0;
+        group->selectionLen++;
+      }
+
+      group->targetColors[i] = highColor2;
+      group->state[i]++;
+      
+      break;
+    
+    case 3:
+      checkState(group, i, i);
+      break;
+    
+    case 4:
+      group->targetColors[i] = currentColor;
+      group->state[i]++;
+      break;
+    
+    case 5:
+      checkState(group, i, i);
+      break;
+      
+    default:  
+      group->state[i] = 0;
+      group->selected[i] = nextUnselected(group);
+
+      if(firstUnselected(group) >= group->length - 1) {
+        group->animation = &flicker;
+        group->selection = &flickerStrategy;
+        group->counter = 0;
+        group->waitFrames = 0;
+      }
+    }
+  }
+}
+
+void happyStrategy(LedGroup* group) {
+  group->selectionLen = 1;
+
+  for(int i=0; i<10; i++) {
+    group->increment[i][0] = 10;
+    group->increment[i][1] = 10;
+    group->increment[i][2] = 10;
+ 
+    group->selected[i] = 0;
+    group->state[0] = 0;
   }
 }
 
@@ -302,16 +401,6 @@ void showStrategy(LedGroup* group) {
   }
 }
 
-
-void happy(LedGroup* group) {
-
-}
-
-
-void happyStrategy(LedGroup* group) {
-  
-}
-
 char* stringAnimation(LedGroup* group) {
 
   if(group->animation == hide) {
@@ -328,6 +417,10 @@ char* stringAnimation(LedGroup* group) {
 
   if(group->animation == flicker) {
     return "flicker";
+  }
+
+  if(group->animation == happy) {
+    return "happy";
   }
 
   return "unknown";
