@@ -5,6 +5,7 @@
 
 void setCurrentColor(Color color);
 Color getCurrentColor();
+void randomColor();
 
 void flicker(LedGroup* group);
 void flickerStrategy(LedGroup* group);

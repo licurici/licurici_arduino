@@ -45,6 +45,7 @@ unsigned long lastHideUpdateTime;
 const unsigned long lightThreshold = 160;
 
 long oldTime = 0;
+long lastRandomTime = 0;
 
 void irq1()
 {
@@ -63,7 +64,9 @@ void setup() {
   lastHideUpdateTime = 0;
 
   randomSeed(analogRead(audioPin));
-
+  randomColor();
+  lastRandomTime = 0;
+  
   strip.begin();
   strip.show();
   
@@ -163,6 +166,11 @@ void loop() {
 
   //audioLoop();
   //lightLoop();
+
+  if(millis() - lastRandomTime >= 108000000) {
+    lastRandomTime = millis();
+    randomColor();
+  }
 
   if(millis() - oldTime >= 20) {
     
@@ -287,7 +295,7 @@ void performAction(SerialAction action) {
         blue = Serial.parseInt();
         
         setCurrentColor(createColor(red, green, blue));
-
+        
         break;
     
       case reportAction: 
@@ -300,7 +308,9 @@ void performAction(SerialAction action) {
         Serial.print(" ");
         Serial.print(Green(currentColor));
         Serial.print(" ");
-        Serial.println(Blue(currentColor));
+        Serial.print(Blue(currentColor));
+        Serial.print(" = ");
+        Serial.println(getCurrentColor());
         Serial.println("");
   
         Serial.print("light sensor ");
