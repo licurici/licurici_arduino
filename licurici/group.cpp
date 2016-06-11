@@ -38,17 +38,15 @@ void LedGroup::animate() {
   }
     
   for(int i=0; i<selectionLen; i++) {
-    if(selected[i] > 4) {
-      Color color = strip->getPixelColor(selected[i] + start);
+    Color color = strip->getPixelColor(selected[i] + start);
 
-      byte nextR = nextColor(Red(color), Red(targetColors[i]), increment[i][0]);
-      
-      byte r = nextColor(Red(color), Red(targetColors[i]), increment[i][0]);
-      byte g = nextColor(Green(color), Green(targetColors[i]), increment[i][0]);
-      byte b = nextColor(Blue(color), Blue(targetColors[i]), increment[i][0]);
-  
-      strip->setPixelColor(selected[i] + start, createColor(r, g, b));
-    }
+    byte nextR = nextColor(Red(color), Red(targetColors[i]), increment[i][0]);
+    
+    byte r = nextColor(Red(color), Red(targetColors[i]), increment[i][0]);
+    byte g = nextColor(Green(color), Green(targetColors[i]), increment[i][0]);
+    byte b = nextColor(Blue(color), Blue(targetColors[i]), increment[i][0]);
+
+    strip->setPixelColor(selected[i] + start, createColor(r, g, b));
   }
 }
 
