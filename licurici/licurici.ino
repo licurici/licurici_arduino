@@ -38,8 +38,11 @@ unsigned long LightT = 0;
 unsigned long LightLast;
 unsigned long lightValue;
 
+unsigned long lastHideUpdateTime;
+
 const unsigned long lightThreshold = 160;
 
+long oldTime = 0;
 
 void irq1()
 {
@@ -55,9 +58,11 @@ void setup() {
   digitalWrite(LightPin, HIGH);
   attachInterrupt(0, irq1, RISING);
 
+  lastHideUpdateTime = 0;
+
+  randomSeed(analogRead(audioPin));
+
   strip.begin();
-  
-  // Update LED contents, to start they are all 'off'
   strip.show();
   
   Serial.println("Setup strips"); 
@@ -88,6 +93,38 @@ void setup() {
   Serial.println("Start loop"); 
 }
 
+void hideGroup(int i, int percent) {
+  if(groups[i].isAnimation(&hide) || groups[i].isAnimation(&road)) {
+    return;
+  }
+
+  groups[i].animation = &hide;
+  groups[i].selection = &hideStrategy;
+  groups[i].counter = 0;
+  groups[i].waitFrames = 0;
+  groups[i].hidePercent = min(groups[i].hidePercent + percent, 100);
+  groups[i].animationDone = false;
+}
+
+void updateHidePercentGroup(int i) {
+  if(groups[i].isAnimation(&hide) && groups[i].animationDone) 
+  {
+    Serial.print("Show group ");
+    Serial.println(i);
+
+    groups[i].animation = &show;
+    groups[i].selection = &showStrategy;
+    groups[i].counter = 0;
+  } else if(!groups[i].isAnimation(&show) && groups[i].waitFrames == 0) {
+    int diff = millis() - lastHideUpdateTime;
+
+    if(diff > 1000) {
+      groups[i].hidePercent = max(1, groups[i].hidePercent - 1);
+      lastHideUpdateTime = millis();
+    }
+  }
+}
+
 void audioLoop() {
   int readValue = analogRead(audioPin);
   soundValue = abs(readValue- soundAverage);
@@ -103,33 +140,15 @@ void audioLoop() {
     Serial.print("Hiding ");
     Serial.print(percent);
     Serial.println("% leds");
-    
-    for(int i=0; i<TOTAL_GROUPS; i++)
-    {
-      groups[i].animation = &hide;
-      groups[i].selection = &hideStrategy;
-      groups[i].counter = 0;
-      groups[i].waitFrames = 0;
-      groups[i].hidePercent = min(groups[i].hidePercent + percent, 100);
-      groups[i].animationDone = false;
-    }
-  }
-  else {
-    for(int i=0; i<TOTAL_GROUPS; i++)
-    {
-      if(groups[i].isAnimation(&hide) && groups[i].animationDone) 
-      {
-        Serial.print("Show group ");
-        Serial.println(i);
-    
-        groups[i].animation = &show;
-        groups[i].selection = &showStrategy;
-        groups[i].counter = 0;
-      }
 
-      if(!groups[i].isAnimation(&show) && groups[i].waitFrames == 0) {
-        groups[i].hidePercent = max(1, groups[i].hidePercent - 1);
-      }
+    for(int i=0; i<TOTAL_GROUPS; i++)
+    {
+      hideGroup(i, percent);
+    }
+  } else {
+    for(int i=0; i<TOTAL_GROUPS; i++)
+    {
+      updateHidePercentGroup(i);
     }
   }
 }
@@ -150,16 +169,18 @@ void loop() {
   audioLoop();
   lightLoop();
 
-
-  for(int i=0; i<TOTAL_GROUPS; i++) {
-    if(lightThreshold >= lightValue || groups[i].isAnimation(&hide) ) {
-      groups[i].animate();
+  if(millis() - oldTime >= 20) {
+    
+    for(int i=0; i<TOTAL_GROUPS; i++) {
+      if(lightThreshold >= lightValue || groups[i].isAnimation(&hide) ) {
+        groups[i].animate();
+      }
     }
+    
+    strip.show();
+    
+    oldTime = millis();
   }
-  
-  strip.show();
-
-  delay(20);
   
   SerialAction action = unknownAction;
 

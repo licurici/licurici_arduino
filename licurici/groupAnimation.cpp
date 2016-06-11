@@ -30,6 +30,7 @@ void selectFlickerLeds(LedGroup* group, int i) {
 
   while(group->isSelected(selected)) {
     selected = random(0, group->length);
+    Serial.println(selected);
   }
     
   group->selected[i] = selected;
