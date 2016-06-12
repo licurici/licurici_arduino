@@ -48,7 +48,7 @@ void LedGroup::animate() {
 
     int index = selected[i] + start;
 
-    if(index < start + length) {
+    if(index < start + length) { 
       strip->setPixelColor(index, createColor(r, g, b));
     }
   }

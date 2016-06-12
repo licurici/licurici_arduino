@@ -103,8 +103,6 @@ void nextRoad(LedGroup* group) {
 }
 
 void roadAnimation(LedGroup* group, int wait, Color color1, Color color2) {
-  
-    //Serial.println(group->state[0]);
       
     switch(group->state[0]) {
     case 0:
@@ -153,7 +151,7 @@ void roadAnimation(LedGroup* group, int wait, Color color1, Color color2) {
 }
 
 void road(LedGroup* group) {
-  roadAnimation(group, 0, currentColor, createColor(0,0,0));
+  roadAnimation(group, 50, currentColor, createColor(0,0,0));
 }
 
 void roadStrategy(LedGroup* group) {

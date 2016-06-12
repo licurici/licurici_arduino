@@ -2,15 +2,13 @@
 
 #include <Adafruit_WS2801.h>
 
-//#include <Adafruit_WS2801.h>
-
 #include "group.h"
 #include "groupAnimation.h"
 
 const uint8_t dataPin  = 2;    // Yellow wire on Adafruit Pixels
 const uint8_t clockPin = 3;    // Green wire on Adafruit Pixels
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(100, 2, NEO_RGB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(200, 2, NEO_RGB + NEO_KHZ800);
 
 #define TOTAL_GROUPS 4
 
@@ -75,18 +73,17 @@ void setup() {
   groups[0].animation = &happy;
   groups[0].selection = &happyStrategy;
 
-  groups[1].setup(&strip, 50, 50);
-  groups[1].animation = &happy;
-  groups[1].selection = &happyStrategy;
+  groups[1].setup(&strip, 50, 48);
+  groups[1].animation = &road;
+  groups[1].selection = &roadStrategy;
 
-  groups[2].setup(&strip, 100, 50);
+  groups[2].setup(&strip, 98, 52);
   groups[2].animation = &happy;
   groups[2].selection = &happyStrategy;
 
   groups[3].setup(&strip, 150, 50);
   groups[3].animation = &happy;
   groups[3].selection = &happyStrategy;
-
   
   Serial.println("Start loop"); 
 }
@@ -96,11 +93,17 @@ void hideGroup(int i, int percent) {
     return;
   }
 
+  int finalPercent = min(groups[i].hidePercent + percent, 100);
+
+  Serial.print("Hiding ");
+  Serial.print(finalPercent);
+  Serial.println("% leds");
+  
   groups[i].animation = &hide;
   groups[i].selection = &hideStrategy;
   groups[i].counter = 0;
   groups[i].waitFrames = 0;
-  groups[i].hidePercent = min(groups[i].hidePercent + percent, 100);
+  groups[i].hidePercent = finalPercent;
   groups[i].animationDone = false;
 }
 
@@ -125,7 +128,7 @@ void updateHidePercentGroup(int i) {
 
 void audioLoop() {
   int readValue = analogRead(audioPin);
-  soundValue = abs(readValue- soundAverage);
+  soundValue = abs(readValue - soundAverage);
 
   if(soundValue > soundThreshold) {
     randomSeed(readValue);
@@ -134,10 +137,6 @@ void audioLoop() {
     Serial.println(soundValue - soundThreshold);
 
     int percent = min(100, soundValue - soundThreshold);
-
-    Serial.print("Hiding ");
-    Serial.print(percent);
-    Serial.println("% leds");
 
     for(int i=0; i<TOTAL_GROUPS; i++)
     {
@@ -164,8 +163,8 @@ void lightLoop() {
 
 void loop() {
 
-  //audioLoop();
-  //lightLoop();
+  audioLoop();
+  lightLoop();
 
   if(millis() - lastRandomTime >= 108000000) {
     lastRandomTime = millis();
@@ -173,7 +172,6 @@ void loop() {
   }
 
   if(millis() - oldTime >= 20) {
-    
     for(int i=0; i<TOTAL_GROUPS; i++) {
       if(lightThreshold >= lightValue || groups[i].isAnimation(&hide) || groups[i].isAnimation(&happy) ) {
         groups[i].animate();
@@ -373,13 +371,13 @@ SerialAction intToAction(int value) {
       return showAction;
 
     case 1:
-      return flickerAction;
+      return happyAction;
 
     case 2:
-      return roadAction;
+      return flickerAction;
 
     case 3:
-      return happyAction;
+      return roadAction;
 
     case 4:
       return hideAction;
