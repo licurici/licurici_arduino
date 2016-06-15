@@ -25,6 +25,7 @@ enum SerialAction {
   allHappyAction,
   staminaAction,
   audioThresholdAction,
+  lightThresholdAction,
   unknownAction
 };
 
@@ -44,9 +45,9 @@ unsigned long lightValue;
 unsigned long lastHideUpdateTime;
 
 unsigned long staminaEnd;
-unsigned long staminaMiliseconds = 1000 * 60;
+unsigned long staminaMilliseconds = 60000;
 
-const unsigned long lightThreshold = 160;
+unsigned long lightThreshold = 160;
 
 long oldTime = 0;
 long lastRandomTime = 0;
@@ -138,7 +139,7 @@ void audioLoop() {
 
   int localThreshold = isStamina() ? soundThreshold * 2 : soundThreshold;
 
-  if(soundValue > soundThreshold) {
+  if(soundValue > localThreshold) {
     randomSeed(readValue);
 
     Serial.print("SoundDetected ");
@@ -170,11 +171,21 @@ void lightLoop() {
 }
 
 boolean isStamina() {
+  
+  Serial.println("is stamina"); 
+  Serial.println(millis()); 
+  Serial.println(staminaEnd); 
+  
   return millis() < staminaEnd;
 }
 
 void enableStamina() {
-  staminaEnd = millis() + staminaMiliseconds; 
+  
+  Serial.println("enable stamina"); 
+        
+  staminaEnd = millis() + staminaMilliseconds; 
+  
+  Serial.println(staminaEnd); 
 }
 
 void loop() {
@@ -344,6 +355,20 @@ void performAction(SerialAction action) {
         
         Serial.print("audio threshold ");
         Serial.println(soundThreshold);
+        Serial.print("audio stamina: ");
+        
+        if(isStamina()) {
+          Serial.println("enabled");
+          
+          Serial.print("Stamina left: ");
+          Serial.print(staminaEnd - millis());
+          Serial.println(" milliseconds");
+
+        } else {
+          Serial.println("disabled");
+        }
+
+        
         Serial.println("");
         
         Serial.print("groups ");
@@ -354,8 +379,9 @@ void performAction(SerialAction action) {
         Serial.println("");
 
         for(int i=0; i<TOTAL_GROUPS; i++) {
-          Serial.print("Group ");
-          Serial.println(i);
+          Serial.print("*Group ");
+          Serial.print(i);
+          Serial.println("*");
 
           Serial.print(" leds ");
           Serial.println(groups[i].length);
@@ -381,7 +407,13 @@ void performAction(SerialAction action) {
         soundThreshold = Serial.parseInt();
         
         break;
-      
+
+      case lightThresholdAction:
+        Serial.println("Enter the new light threshold");  
+        lightThreshold = Serial.parseInt();
+        
+        break;
+        
       default:
         break;
     }
@@ -422,6 +454,9 @@ SerialAction intToAction(int value) {
 
     case 9: 
       return audioThresholdAction;
+
+    case 10:
+      return lightThresholdAction;
     
     default:
       break;
