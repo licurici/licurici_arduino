@@ -52,6 +52,10 @@ unsigned long lightThreshold = 160;
 long oldTime = 0;
 long lastRandomTime = 0;
 
+bool audioLoopEnabled = false;
+bool lightLoopEnabled = false;
+
+
 void irq1()
 {
   LightCnt++;
@@ -134,6 +138,7 @@ void updateHidePercentGroup(int i) {
 }
 
 void audioLoop() {
+  audioLoopEnabled = true;
   int readValue = analogRead(audioPin);
   soundValue = abs(readValue - soundAverage);
 
@@ -160,6 +165,8 @@ void audioLoop() {
 }
 
 void lightLoop() {
+  lightLoopEnabled = true;
+  
   if (millis() - LightLast > 1000)
   {
     LightLast = millis();
@@ -171,27 +178,17 @@ void lightLoop() {
 }
 
 boolean isStamina() {
-  
-  Serial.println("is stamina"); 
-  Serial.println(millis()); 
-  Serial.println(staminaEnd); 
-  
   return millis() < staminaEnd;
 }
 
 void enableStamina() {
-  
-  Serial.println("enable stamina"); 
-        
   staminaEnd = millis() + staminaMilliseconds; 
-  
-  Serial.println(staminaEnd); 
 }
 
 void loop() {
 
-  //audioLoop();
-  //lightLoop();
+  audioLoop();
+  lightLoop();
 
   if(millis() - lastRandomTime >= 108000000) {
     lastRandomTime = millis();
@@ -331,6 +328,13 @@ void performAction(SerialAction action) {
         currentColor = getCurrentColor();
 
         Serial.println("BEGIN REPORT");
+
+        Serial.print("audio loop: `");
+        Serial.println(audioLoopEnabled ? "on`": "off`");
+        
+        Serial.print("light loop: `");
+        Serial.println(lightLoopEnabled ? "on`": "off`");
+        Serial.println();
 
         Serial.print("current color ");
 
