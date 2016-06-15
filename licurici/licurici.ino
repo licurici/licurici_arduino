@@ -34,6 +34,8 @@ const int soundAverage = 340;
 
 int soundThreshold = 70;
 int soundValue;
+unsigned long audioTimestamp;
+unsigned long maxAudioPeek = 40;
 
 const int LightPin = 3;
 volatile unsigned long LightCnt = 0;
@@ -41,8 +43,6 @@ unsigned long oldLightCnt = 0;
 unsigned long LightT = 0;
 unsigned long LightLast;
 unsigned long lightValue;
-
-unsigned long lastHideUpdateTime;
 
 unsigned long staminaEnd;
 unsigned long staminaMilliseconds = 60000;
@@ -69,8 +69,6 @@ void setup() {
   pinMode(LightPin, INPUT);
   digitalWrite(LightPin, HIGH);
   attachInterrupt(0, irq1, RISING);
-
-  lastHideUpdateTime = 0;
 
   randomSeed(analogRead(audioPin));
   randomColor();
@@ -104,7 +102,7 @@ void hideGroup(int i, int percent) {
     return;
   }
 
-  int finalPercent = min(groups[i].hidePercent + percent, 100);
+  int finalPercent = min(groups[i].percentHidden() + percent, 100);
 
   Serial.print("Hiding ");
   Serial.print(finalPercent);
@@ -124,33 +122,40 @@ void updateHidePercentGroup(int i) {
     Serial.print("Show group ");
     Serial.println(i);
 
-    groups[i].animation = &show;
-    groups[i].selection = &showStrategy;
+    groups[i].animation = isStamina() ? &flicker : &show;
+    groups[i].selection = isStamina() ? &flickerStrategy : &showStrategy;
     groups[i].counter = 0;
-  } else if(!groups[i].isAnimation(&show) && groups[i].waitFrames == 0) {
-    int diff = millis() - lastHideUpdateTime;
-
-    if(diff > 1000) {
-      groups[i].hidePercent = max(1, groups[i].hidePercent - 1);
-      lastHideUpdateTime = millis();
-    }
   }
 }
 
 void audioLoop() {
   audioLoopEnabled = true;
+  
   int readValue = analogRead(audioPin);
   soundValue = abs(readValue - soundAverage);
 
   int localThreshold = isStamina() ? soundThreshold * 2 : soundThreshold;
 
+  bool shouldHide = false;
+
   if(soundValue > localThreshold) {
+    if(audioTimestamp == 0) {
+      shouldHide = true;
+    }
+    
+    audioTimestamp = millis();
+  } else if(millis() - audioTimestamp > maxAudioPeek) {
+    audioTimestamp = 0;
+  }
+
+  if(shouldHide) {
+  
     randomSeed(readValue);
 
     Serial.print("SoundDetected ");
-    Serial.println(soundValue - soundThreshold);
+    Serial.println(soundValue - localThreshold);
 
-    int percent = min(100, soundValue - soundThreshold);
+    int percent = min(100, (soundValue - localThreshold) / 4);
 
     for(int i=0; i<TOTAL_GROUPS; i++)
     {
@@ -338,6 +343,7 @@ void performAction(SerialAction action) {
 
         Serial.print("current color ");
 
+        Serial.print(Red(currentColor));
         Serial.print(" ");
         Serial.print(Green(currentColor));
         Serial.print(" ");
@@ -367,7 +373,6 @@ void performAction(SerialAction action) {
           Serial.print("Stamina left: ");
           Serial.print(staminaEnd - millis());
           Serial.println(" milliseconds");
-
         } else {
           Serial.println("disabled");
         }
