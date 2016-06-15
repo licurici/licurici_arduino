@@ -23,6 +23,8 @@ enum SerialAction {
   colorAction,
   reportAction,
   allHappyAction,
+  staminaAction,
+  audioThresholdAction,
   unknownAction
 };
 
@@ -256,8 +258,6 @@ void performAction(SerialAction action) {
         groups[nr].waitFrames = 0;
         
         break;
-
-        break;
         
       case hideAction:
         Serial.println("Select hide group");  
@@ -297,7 +297,11 @@ void performAction(SerialAction action) {
         enableStamina();
         break;
 
-       
+      case staminaAction:
+      
+        enableStamina();
+        break;
+
       case colorAction:
         Serial.println("red");  
         red = Serial.parseInt();
@@ -370,8 +374,14 @@ void performAction(SerialAction action) {
         
         Serial.println("END REPORT");
         
+        break;
+
+      case audioThresholdAction: 
+        Serial.println("Enter the new audio threshold");  
+        soundThreshold = Serial.parseInt();
         
         break;
+      
       default:
         break;
     }
@@ -406,7 +416,13 @@ SerialAction intToAction(int value) {
 
     case 7: 
       return allHappyAction;
-  
+
+    case 8:
+      return staminaAction;
+
+    case 9: 
+      return audioThresholdAction;
+    
     default:
       break;
   }
