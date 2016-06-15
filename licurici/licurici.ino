@@ -28,7 +28,8 @@ enum SerialAction {
 
 const int audioPin = A0;
 const int soundAverage = 340;
-const int soundThreshold = 40;
+
+int soundThreshold = 70;
 int soundValue;
 
 const int LightPin = 3;
@@ -39,6 +40,9 @@ unsigned long LightLast;
 unsigned long lightValue;
 
 unsigned long lastHideUpdateTime;
+
+unsigned long staminaEnd;
+unsigned long staminaMiliseconds = 1000 * 60;
 
 const unsigned long lightThreshold = 160;
 
@@ -130,6 +134,8 @@ void audioLoop() {
   int readValue = analogRead(audioPin);
   soundValue = abs(readValue - soundAverage);
 
+  int localThreshold = isStamina() ? soundThreshold * 2 : soundThreshold;
+
   if(soundValue > soundThreshold) {
     randomSeed(readValue);
 
@@ -161,10 +167,18 @@ void lightLoop() {
   }
 }
 
+boolean isStamina() {
+  return millis() < staminaEnd;
+}
+
+void enableStamina() {
+  staminaEnd = millis() + staminaMiliseconds; 
+}
+
 void loop() {
 
-  audioLoop();
-  lightLoop();
+  //audioLoop();
+  //lightLoop();
 
   if(millis() - lastRandomTime >= 108000000) {
     lastRandomTime = millis();
@@ -279,6 +293,8 @@ void performAction(SerialAction action) {
             groups[i].waitFrames = 0;
           }
         }
+
+        enableStamina();
         break;
 
        
@@ -302,7 +318,7 @@ void performAction(SerialAction action) {
         Serial.println("BEGIN REPORT");
 
         Serial.print("current color ");
-        Serial.print(Red(currentColor));
+
         Serial.print(" ");
         Serial.print(Green(currentColor));
         Serial.print(" ");
