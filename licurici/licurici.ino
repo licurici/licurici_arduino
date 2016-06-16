@@ -229,7 +229,6 @@ void loop() {
     oldTime = millis();
   }
 
-
   if (isDark) {
     audioLoop();
   } else {
@@ -383,6 +382,11 @@ void performAction(SerialAction action) {
       Serial.print(Blue(currentColor));
       Serial.print(" = ");
       Serial.println(getCurrentColor());
+      Serial.println("");
+      
+      Serial.print("next color in ");
+      Serial.print(1080000 - millis() - lastRandomTime);
+      Serial.println(" milliseconds");
       Serial.println("");
 
       Serial.print("light sensor ");

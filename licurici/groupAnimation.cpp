@@ -1,10 +1,12 @@
 #include "groupAnimation.h"
 
 Color currentColor = createColor(0, 10, 5);
-Color availableColors[5] = {856835, 857092, 660480, 398337};
+Color availableColors[7] = {856835, 857092, 660480, 398337, 985600, 656128, 657920};
 
 void randomColor() {
-  int index = random(0, 4);
+  int index = random(0, 7);
+  Serial.print("Selected color ");
+  Serial.println(index);
   currentColor = availableColors[index];
 }
 
