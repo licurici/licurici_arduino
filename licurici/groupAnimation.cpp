@@ -1,7 +1,7 @@
 #include "groupAnimation.h"
 
 Color currentColor = createColor(0, 10, 5);
-Color availableColors[5] = {2565, 655370, 1290, 655360, 2560};
+Color availableColors[5] = {856835, 857092, 660480, 398337};
 
 void randomColor() {
   int index = random(0, 4);
