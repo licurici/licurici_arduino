@@ -26,6 +26,7 @@ enum SerialAction {
   staminaAction,
   audioThresholdAction,
   lightThresholdAction,
+  queryAudio,
   unknownAction
 };
 
@@ -459,7 +460,12 @@ void performAction(SerialAction action) {
       lightThreshold = Serial.parseInt();
 
       break;
-
+    case queryAudio:
+      Serial.print("audio-level:");
+      Serial.print(soundValue);
+      Serial.print("\n");
+      break;
+  
     default:
       break;
   }
@@ -503,6 +509,9 @@ SerialAction intToAction(int value) {
 
     case 10:
       return lightThresholdAction;
+
+    case 11:
+      return queryAudio;
 
     default:
       break;
