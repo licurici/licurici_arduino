@@ -1,3 +1,5 @@
+#include <Ultrasonic.h>
+
 #include <Adafruit_NeoPixel.h>
 
 #include <Adafruit_WS2801.h>
@@ -29,6 +31,8 @@ enum SerialAction {
   queryAudio,
   unknownAction
 };
+
+Ultrasonic distanceSensor(7);
 
 const int audioPin = A0;
 const int soundAverage = 340;
@@ -405,6 +409,9 @@ void performAction(SerialAction action) {
       Serial.println(soundThreshold);
       Serial.print("audio stamina: ");
 
+      Serial.print("distance sensor cm");
+      Serial.println(distanceSensor.MeasureInCentimeters());
+
       if (isStamina()) {
         Serial.println("enabled");
 
@@ -519,5 +526,6 @@ SerialAction intToAction(int value) {
 
   return unknownAction;
 }
+
 
 
