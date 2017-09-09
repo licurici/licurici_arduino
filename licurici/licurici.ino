@@ -403,15 +403,15 @@ void performAction(SerialAction action) {
       Serial.println(lightThreshold);
       Serial.println("");
 
+      Serial.print("distance sensor cm");
+      Serial.println(distanceSensor.MeasureInCentimeters());
+
       Serial.print("audio sensor ");
       Serial.println(soundValue);
 
       Serial.print("audio threshold ");
       Serial.println(soundThreshold);
       Serial.print("audio stamina: ");
-
-      Serial.print("distance sensor cm");
-      Serial.println(distanceSensor.MeasureInCentimeters());
 
       if (isStamina()) {
         Serial.println("enabled");
