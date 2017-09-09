@@ -29,6 +29,7 @@ enum SerialAction {
   audioThresholdAction,
   lightThresholdAction,
   queryAudio,
+  distanceMeasurementAction,
   unknownAction
 };
 
@@ -472,7 +473,13 @@ void performAction(SerialAction action) {
       Serial.print(soundValue);
       Serial.print("\n");
       break;
-  
+
+    case distanceMeasurementAction:
+      Serial.print("distance to object in cm: ");
+      Serial.print(distanceSensor.MeasureInCentimeters());
+      Serial.print("\n");
+      break;
+    
     default:
       break;
   }
@@ -519,6 +526,9 @@ SerialAction intToAction(int value) {
 
     case 11:
       return queryAudio;
+
+    case 12:
+      return distanceMeasurementAction;
 
     default:
       break;
