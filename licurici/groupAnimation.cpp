@@ -2,6 +2,11 @@
 
 Color currentColor = createColor(100, 50, 50);
 Color availableColors[7] = {11176990, 2009630, 1973930, 1354410, 1336490, 6602262, 12477462};
+byte colorIntensity = 100;
+
+void setFlickerIntensity(byte intensity) {
+  colorIntensity = intensity;
+}
 
 void randomColor() {
   int index = random(0, 7);
@@ -31,9 +36,20 @@ void flickerSelectColor(LedGroup* group, int i) {
   byte g = Green(currentColor) / proportion;
   byte b = Blue(currentColor) / proportion;
 
-  group->increment[i][0] = max((r / 2) / proportion, 1);
-  group->increment[i][1] = max((g / 2) / proportion, 1);
-  group->increment[i][2] = max((b / 2) / proportion, 1);
+  if(colorIntensity < 100) {
+    r = (r / 100) * colorIntensity;
+    g = (g / 100) * colorIntensity;
+    b = (b / 100) * colorIntensity;
+  }
+
+  Color c = group->getColor(i);
+  byte cr = Red(c);
+  byte cg = Green(c);
+  byte cb = Blue(c);
+
+  group->increment[i][0] = max(abs(cr - r) / 5, 1);
+  group->increment[i][1] = max(abs(cg - g) / 5, 1);
+  group->increment[i][2] = max(abs(cb - b) / 5, 1);
 
   group->targetColors[i] = createColor(r,g,b);
 }
@@ -48,6 +64,14 @@ void selectFlickerLeds(LedGroup* group, int i) {
   group->animatingPixel[i] = selected;
 }
 
+void setProportionalTargetColor(LedGroup* group, int i) {
+  byte r = (Red(currentColor) / 100) * colorIntensity;
+  byte g = (Green(currentColor) / 100) * colorIntensity;
+  byte b = (Blue(currentColor) / 100) * colorIntensity;
+
+  group->targetColors[i] = createColor(r, g, b);
+}
+
 void flicker(LedGroup* group) {
 
   for(int i=0; i<group->selectionLen; i++) {
@@ -59,7 +83,7 @@ void flicker(LedGroup* group) {
         break;
 
       case 2:
-        group->targetColors[i] = currentColor;
+        setProportionalTargetColor(group, i);
         group->pixelState[i]++;
         break;
 

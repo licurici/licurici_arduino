@@ -3,6 +3,8 @@
 
 #include "group.h"
 
+void setFlickerIntensity(byte intensity);
+
 void setCurrentColor(Color color);
 Color getCurrentColor();
 void randomColor();

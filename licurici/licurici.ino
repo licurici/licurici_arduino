@@ -1,4 +1,4 @@
-// #include <Ultrasonic.h>
+#include <Ultrasonic.h>
 #include <Adafruit_NeoPixel.h>
 
 #include "group.h"
@@ -29,7 +29,7 @@ enum SerialAction {
   unknownAction
 };
 
-//Ultrasonic distanceSensor(7);
+Ultrasonic distanceSensor(7);
 
 const int audioPin = A0;
 const int soundAverage = 340;
@@ -44,6 +44,7 @@ unsigned long staminaMilliseconds = 60000;
 
 long oldTime = 0;
 long lastRandomTime = 0;
+long oldDistanceTime = 0;
 
 bool audioLoopEnabled = false;
 bool isDark = false;
@@ -63,8 +64,8 @@ void setup() {
   Serial.println("Setup strips");
 
   groups[0].setup(&strip, 0, 50);
-  groups[1].setup(&strip, 50, 48);
-  groups[2].setup(&strip, 98, 52);
+  groups[1].setup(&strip, 50, 50);
+  groups[2].setup(&strip, 100, 50);
   groups[3].setup(&strip, 150, 50);
 
   resetAnimations();
@@ -182,6 +183,14 @@ void enableStamina() {
   staminaEnd = millis() + staminaMilliseconds;
 }
 
+byte intensityFromDistance(long distance) {
+  if(distance < 100) {
+    return distance;
+  }
+
+  return min(100, max(0, distance - 100));
+}
+
 void loop() {
   if (millis() - oldTime >= 20) {
     for (int i = 0; i < TOTAL_GROUPS; i++) {
@@ -197,6 +206,17 @@ void loop() {
   if (millis() - lastRandomTime >= 1080000) {
     lastRandomTime = millis();
     randomColor();
+  }
+
+  if (groups[0].isAnimation(&show) || groups[0].isAnimation(&flicker)) {
+    if (millis() - oldDistanceTime >= 500) {
+      distanceSensor.MeasureInCentimeters();
+      setFlickerIntensity(intensityFromDistance(distanceSensor.RangeInCentimeters));
+      oldDistanceTime = millis();
+      Serial.print(distanceSensor.RangeInCentimeters);
+      Serial.print(" ");
+      Serial.println(intensityFromDistance(distanceSensor.RangeInCentimeters));
+    }
   }
 
   SerialAction action = unknownAction;
@@ -332,7 +352,7 @@ void performAction(SerialAction action) {
       Serial.println("");
 
       Serial.print("distance sensor cm");
-      Serial.println(0);//distanceSensor.MeasureInCentimeters());
+      Serial.println(distanceSensor.RangeInCentimeters);
 
       Serial.print("audio sensor ");
       Serial.println(soundValue);
@@ -399,7 +419,7 @@ void performAction(SerialAction action) {
 
     case distanceMeasurementAction:
       Serial.print("distance to object in cm: ");
-      Serial.print(0);//distanceSensor.MeasureInCentimeters());
+      Serial.print(distanceSensor.RangeInCentimeters);
       Serial.print("\n");
       break;
     
