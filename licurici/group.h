@@ -1,8 +1,6 @@
 #ifndef __LedGroup__
 #define __LedGroup__
 
-//#include <Adafruit_WS2801.h>
-
 #include <Adafruit_NeoPixel.h>
 
 #include "color.h"
@@ -23,16 +21,19 @@ class LedGroup {
     SelectionStrategy selection;
     int waitFrames;
 
-    //Adafruit_WS2801* strip;
-    
     Adafruit_NeoPixel* strip;
+    //Adafruit_NeoPixel* strip;
+
+    void setNextColors();
+    void setNextPixelColor(int i);
+
     int start;
     int length;
 
     int percentHidden();
 
-    bool reachedTarget(byte);
-    bool isSelected(byte);
+    bool pixelHasTargetColor(byte);
+    bool isPixelAnimated(byte);
     bool isHidden(byte);
     bool isAnimation(Animation);
 
@@ -41,9 +42,9 @@ class LedGroup {
     Color getColor(byte);
     
     Color targetColors[10];
-    byte state[10];
+    byte pixelState[10];
     byte increment[10][3];
-    int selected[10];
+    int animatingPixel[10];
     int selectionLen;
     
     int hidePercent;

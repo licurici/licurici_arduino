@@ -22,7 +22,7 @@ void happyStrategy(LedGroup* group);
 void show(LedGroup* group);
 void showStrategy(LedGroup* group);
 
-char* stringAnimation(LedGroup* group);
+const char* stringAnimation(LedGroup* group);
 
 
 #endif // __GroupAnimation__

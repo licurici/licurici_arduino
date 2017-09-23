@@ -1,8 +1,5 @@
-#include <Ultrasonic.h>
-
+// #include <Ultrasonic.h>
 #include <Adafruit_NeoPixel.h>
-
-#include <Adafruit_WS2801.h>
 
 #include "group.h"
 #include "groupAnimation.h"
@@ -27,13 +24,12 @@ enum SerialAction {
   allHappyAction,
   staminaAction,
   audioThresholdAction,
-  lightThresholdAction,
   queryAudio,
   distanceMeasurementAction,
   unknownAction
 };
 
-Ultrasonic distanceSensor(7);
+//Ultrasonic distanceSensor(7);
 
 const int audioPin = A0;
 const int soundAverage = 340;
@@ -43,38 +39,19 @@ int soundValue;
 unsigned long audioTimestamp;
 unsigned long maxAudioPeek = 40;
 
-const int LightPin = 3;
-volatile unsigned long LightCnt = 0;
-unsigned long oldLightCnt = 0;
-unsigned long LightT = 0;
-unsigned long LightLast;
-unsigned long lightValue;
-
 unsigned long staminaEnd;
 unsigned long staminaMilliseconds = 60000;
-
-unsigned long lightThreshold = 90;
 
 long oldTime = 0;
 long lastRandomTime = 0;
 
 bool audioLoopEnabled = false;
-bool lightLoopEnabled = false;
 bool isDark = false;
-
-void irq1()
-{
-  LightCnt++;
-}
 
 void setup() {
   delay(2000);
 
   Serial.begin(9600);
-
-  pinMode(LightPin, INPUT);
-  digitalWrite(LightPin, HIGH);
-  attachInterrupt(0, irq1, RISING);
 
   randomSeed(analogRead(audioPin));
   randomColor();
@@ -101,8 +78,8 @@ void resetAnimations() {
   groups[0].animation = &happy;
   groups[0].selection = &happyStrategy;
 
-  groups[1].animation = &road;
-  groups[1].selection = &roadStrategy;
+  groups[1].animation = &happy;
+  groups[1].selection = &happyStrategy;
 
   groups[2].animation = &happy;
   groups[2].selection = &happyStrategy;
@@ -126,7 +103,7 @@ void hideAll() {
 }
 
 void hideGroup(int i, int percent) {
-  if (groups[i].isAnimation(&hide) || groups[i].isAnimation(&road)) {
+  if (groups[i].isAnimation(&hide)) {
     return;
   }
 
@@ -197,21 +174,6 @@ void audioLoop() {
   }
 }
 
-void lightLoop() {
-  lightLoopEnabled = true;
-
-  if (millis() - LightLast > 1000)
-  {
-    LightLast = millis();
-    LightT = LightCnt;
-    unsigned long hz = LightT - oldLightCnt;
-    oldLightCnt = LightT;
-    lightValue = (hz + 50) / 100;
-
-    isDark = lightValue < lightThreshold;
-  }
-}
-
 boolean isStamina() {
   return millis() < staminaEnd;
 }
@@ -221,26 +183,17 @@ void enableStamina() {
 }
 
 void loop() {
-  lightLoop();
-
   if (millis() - oldTime >= 20) {
     for (int i = 0; i < TOTAL_GROUPS; i++) {
-      if (isDark || groups[i].isAnimation(&hide)) {
-        groups[i].animate();
-      }
+      groups[i].animate();
     }
 
     strip.show();
-
     oldTime = millis();
   }
 
-  if (isDark) {
-    audioLoop();
-  } else {
-    hideAll();
-  }
-
+  audioLoop();
+  
   if (millis() - lastRandomTime >= 1080000) {
     lastRandomTime = millis();
     randomColor();
@@ -295,17 +248,6 @@ void performAction(SerialAction action) {
 
       break;
 
-    case roadAction:
-      Serial.println("Select road group");
-      nr = Serial.parseInt();
-
-      groups[nr].animation = &road;
-      groups[nr].selection = &roadStrategy;
-      groups[nr].counter = 0;
-      groups[nr].waitFrames = 0;
-
-      break;
-
     case hideAction:
       Serial.println("Select hide group");
       nr = Serial.parseInt();
@@ -333,12 +275,10 @@ void performAction(SerialAction action) {
 
     case allHappyAction:
       for (int i = 0; i < TOTAL_GROUPS; i++) {
-        if (!groups[i].isAnimation(&road)) {
-          groups[i].animation = &happy;
-          groups[i].selection = &happyStrategy;
-          groups[i].counter = 0;
-          groups[i].waitFrames = 0;
-        }
+        groups[i].animation = &happy;
+        groups[i].selection = &happyStrategy;
+        groups[i].counter = 0;
+        groups[i].waitFrames = 0;
       }
 
       enableStamina();
@@ -371,10 +311,6 @@ void performAction(SerialAction action) {
       Serial.print("audio loop: `");
       Serial.println(audioLoopEnabled ? "on`" : "off`");
 
-      Serial.print("light loop: `");
-      Serial.println(lightLoopEnabled ? "on`" : "off`");
-      Serial.println();
-
       Serial.print("isDark: ");
       Serial.println(isDark);
       Serial.println();
@@ -395,16 +331,8 @@ void performAction(SerialAction action) {
       Serial.println(" milliseconds");
       Serial.println("");
 
-      Serial.print("light sensor ");
-      Serial.print(lightValue);
-      Serial.println(" mW/m2");
-
-      Serial.print("light threshold ");
-      Serial.println(lightThreshold);
-      Serial.println("");
-
       Serial.print("distance sensor cm");
-      Serial.println(distanceSensor.MeasureInCentimeters());
+      Serial.println(0);//distanceSensor.MeasureInCentimeters());
 
       Serial.print("audio sensor ");
       Serial.println(soundValue);
@@ -463,11 +391,6 @@ void performAction(SerialAction action) {
 
       break;
 
-    case lightThresholdAction:
-      Serial.println("Enter the new light threshold");
-      lightThreshold = Serial.parseInt();
-
-      break;
     case queryAudio:
       Serial.print("audio-level:");
       Serial.print(soundValue);
@@ -476,7 +399,7 @@ void performAction(SerialAction action) {
 
     case distanceMeasurementAction:
       Serial.print("distance to object in cm: ");
-      Serial.print(distanceSensor.MeasureInCentimeters());
+      Serial.print(0);//distanceSensor.MeasureInCentimeters());
       Serial.print("\n");
       break;
     
@@ -520,9 +443,6 @@ SerialAction intToAction(int value) {
 
     case 9:
       return audioThresholdAction;
-
-    case 10:
-      return lightThresholdAction;
 
     case 11:
       return queryAudio;

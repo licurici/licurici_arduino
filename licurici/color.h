@@ -1,7 +1,7 @@
 #ifndef __color__
 #define __color__
 
-#include <Adafruit_WS2801.h>
+#include <Adafruit_NeoPixel.h>
 
 typedef uint32_t Color;
 

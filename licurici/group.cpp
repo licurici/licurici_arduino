@@ -21,7 +21,6 @@ int LedGroup::percentHidden() {
   return (countHidden / length) * 100;
 }
 
-
 void LedGroup::animate() {
   if(waitFrames > 0) {
     waitFrames--;
@@ -36,34 +35,41 @@ void LedGroup::animate() {
   if(animation != NULL) {
     animation(this);
   }
-    
+
+  setNextColors();
+}
+
+void LedGroup::setNextColors() {
   for(int i=0; i<selectionLen; i++) {
-    Color color = strip->getPixelColor(selected[i] + start);
-
-    byte nextR = nextColor(Red(color), Red(targetColors[i]), increment[i][0]);
-    
-    byte r = nextColor(Red(color), Red(targetColors[i]), increment[i][0]);
-    byte g = nextColor(Green(color), Green(targetColors[i]), increment[i][0]);
-    byte b = nextColor(Blue(color), Blue(targetColors[i]), increment[i][0]);
-
-    int index = selected[i] + start;
-
-    if(index < start + length) { 
-      strip->setPixelColor(index, createColor(r, g, b));
-    }
+    setNextPixelColor(i);
   }
 }
 
-bool LedGroup::reachedTarget(byte index) {
-  Color color = strip->getPixelColor(start + selected[index]);
+void LedGroup::setNextPixelColor(int i) {
+  Color color = strip->getPixelColor(animatingPixel[i] + start);
+
+  byte r = nextColor(Red(color), Red(targetColors[i]), increment[i][0]);
+  byte g = nextColor(Green(color), Green(targetColors[i]), increment[i][1]);
+  byte b = nextColor(Blue(color), Blue(targetColors[i]), increment[i][2]);
+
+  int index = animatingPixel[i] + start;
+
+  if(index < start + length) { 
+    strip->setPixelColor(index, createColor(r, g, b));
+  }
+}
+
+bool LedGroup::pixelHasTargetColor(byte index) {
+  Color color = strip->getPixelColor(start + animatingPixel[index]);
 
   return color == targetColors[index];
 }
 
-bool LedGroup::isSelected(byte index) {
-
+bool LedGroup::isPixelAnimated(byte index) {
   for(int i=0; i<selectionLen; i++) {
-    if(selected[i] == index) return true; 
+    if(animatingPixel[i] == index) {
+      return true;
+    }
   }
   
   return false; 
