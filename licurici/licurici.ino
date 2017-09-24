@@ -4,6 +4,10 @@
 #include "group.h"
 #include "groupAnimation.h"
 
+#define HAS_AUDIO_SENSOR false
+#define HAS_DISTANCE_SENSOR false
+#define ENABLE_RANDOM_COLOR false
+
 const uint8_t dataPin  = 2;    // Yellow wire on Adafruit Pixels
 const uint8_t clockPin = 3;    // Green wire on Adafruit Pixels
 
@@ -32,34 +36,50 @@ enum SerialAction {
   unknownAction
 };
 
-Ultrasonic distanceSensor(7);
+#if HAS_DISTANCE_SENSOR
+  Ultrasonic distanceSensor(7);
+  
+  long oldDistanceTime = 0;
+  
+  int maxDistance = 250;
+  int distanceValue = 0;
+#endif
 
-const int audioPin = A0;
-const int soundAverage = 340;
+#if HAS_AUDIO_SENSOR
+  const int audioPin = A0;
+  const int soundAverage = 340;
+  
+  int soundThreshold = 70;
+  int soundValue;
+  unsigned long maxAudioPeek = 40;
+  
+  unsigned long staminaEnd;
+  unsigned long staminaMilliseconds = 60000;
+  
+  bool audioLoopEnabled = false;
+#endif
 
-int soundThreshold = 70;
-int soundValue;
-unsigned long audioTimestamp;
-unsigned long maxAudioPeek = 40;
-
-unsigned long staminaEnd;
-unsigned long staminaMilliseconds = 60000;
-
+unsigned long hideTimestamp;
 long oldTime = 0;
-long lastRandomTime = 0;
-long oldDistanceTime = 0;
 
-bool audioLoopEnabled = false;
-bool isDark = false;
+#if ENABLE_RANDOM_COLOR
+  long lastRandomTime = 0;
+#endif
 
 void setup() {
   delay(2000);
 
   Serial.begin(9600);
 
-  randomSeed(analogRead(audioPin));
+  #if HAS_AUDIO_SENSOR
+    randomSeed(analogRead(audioPin));
+  #endif
+  
   randomColor();
-  lastRandomTime = 0;
+
+  #if ENABLE_RANDOM_COLOR
+    lastRandomTime = 0;
+  #endif
 
   strip.begin();
   strip.show();
@@ -130,72 +150,74 @@ void updateHidePercentGroup(int i) {
   {
     Serial.print("Show group ");
     Serial.println(i);
-
-    groups[i].animation = isStamina() ? &flicker : &show;
-    groups[i].selection = isStamina() ? &flickerStrategy : &showStrategy;
+    
+    groups[i].hidePercent = 0;
     groups[i].counter = 0;
+
+    #if HAS_AUDIO_SENSOR
+        groups[i].animation = isStamina() ? &flicker : &show;
+        groups[i].selection = isStamina() ? &flickerStrategy : &showStrategy;
+    #else
+        groups[i].animation = &show;
+        groups[i].selection = &showStrategy;
+    #endif
   }
 }
 
-void audioLoop() {
-  audioLoopEnabled = true;
 
-  int readValue = analogRead(audioPin);
-  soundValue = abs(readValue - soundAverage);
-
-  int localThreshold = isStamina() ? soundThreshold * 2 : soundThreshold;
-
-  bool shouldHide = false;
-
-  if (soundValue > localThreshold) {
-    if (audioTimestamp == 0) {
-      shouldHide = true;
+#if HAS_AUDIO_SENSOR
+  void audioLoop() {
+    audioLoopEnabled = true;
+  
+    int readValue = analogRead(audioPin);
+    soundValue = abs(readValue - soundAverage);
+  
+    int localThreshold = isStamina() ? soundThreshold * 2 : soundThreshold;
+  
+    bool shouldHide = false;
+  
+    if (soundValue > localThreshold) {
+      if (hideTimestamp == 0) {
+        shouldHide = true;
+      }
+  
+      hideTimestamp = millis();
+    } else if (millis() - hideTimestamp > maxAudioPeek) {
+      hideTimestamp  = 0;
     }
-
-    audioTimestamp = millis();
-  } else if (millis() - audioTimestamp > maxAudioPeek) {
-    audioTimestamp = 0;
-  }
-
-  if (shouldHide) {
-
-    randomSeed(readValue);
-
-    Serial.print("SoundDetected ");
-    Serial.println(soundValue - localThreshold);
-
-    int percent = min(100, (soundValue - localThreshold) / 4);
-
-    Serial.print("hide:");
-    Serial.println(percent);
-
-    for (int i = 0; i < TOTAL_GROUPS; i++)
-    {
-      hideGroup(i, percent);
-    }
-  } else {
-    for (int i = 0; i < TOTAL_GROUPS; i++)
-    {
-      updateHidePercentGroup(i);
+  
+    if (shouldHide) {
+  
+      randomSeed(readValue);
+  
+      Serial.print("SoundDetected ");
+      Serial.println(soundValue - localThreshold);
+  
+      int percent = min(100, (soundValue - localThreshold) / 4);
+  
+      Serial.print("hide:");
+      Serial.println(percent);
+  
+      for (int i = 0; i < TOTAL_GROUPS; i++)
+      {
+        hideGroup(i, percent);
+      }
+    } else {
+      for (int i = 0; i < TOTAL_GROUPS; i++)
+      {
+        updateHidePercentGroup(i);
+      }
     }
   }
-}
 
-boolean isStamina() {
-  return millis() < staminaEnd;
-}
-
-void enableStamina() {
-  staminaEnd = millis() + staminaMilliseconds;
-}
-
-byte intensityFromDistance(long distance) {
-  if(distance < 100) {
-    return distance;
+  boolean isStamina() {
+    return millis() < staminaEnd;
   }
-
-  return min(100, max(0, distance - 100));
-}
+  
+  void enableStamina() {
+    staminaEnd = millis() + staminaMilliseconds;
+  }
+#endif
 
 void loop() {
   if (millis() - oldTime >= 20) {
@@ -207,28 +229,46 @@ void loop() {
     oldTime = millis();
   }
 
-  audioLoop();
-
-  if (millis() - lastRandomTime >= 1080000) {
-    lastRandomTime = millis();
-    randomColor();
-  }
-
-  if (groups[0].isAnimation(&show) || groups[0].isAnimation(&flicker)) {
-    if (millis() - oldDistanceTime >= 500) {
-      //distanceSensor.MeasureInCentimeters();
-      //setFlickerIntensity(intensityFromDistance(distanceSensor.RangeInCentimeters));
-      oldDistanceTime = millis();
-      //Serial.print(distanceSensor.RangeInCentimeters);
-      //Serial.print(" ");
-      //Serial.println(intensityFromDistance(distanceSensor.RangeInCentimeters));
+  #if HAS_AUDIO_SENSOR
+    audioLoop(); 
+  #else
+    for (int i = 0; i < TOTAL_GROUPS; i++)
+    {
+      updateHidePercentGroup(i);
     }
-  }
+  #endif
+
+  #if ENABLE_RANDOM_COLOR
+    if (millis() - lastRandomTime >= 1080000) {
+      lastRandomTime = millis();
+      randomColor();
+    }
+  #endif
+
+  #if HAS_DISTANCE_SENSOR
+    if (groups[0].isAnimation(&show) || groups[0].isAnimation(&flicker)) {
+      if (millis() - oldDistanceTime >= 400) {
+        oldDistanceTime = millis();
+          
+        int value = distanceSensor.distanceRead();
+        if(value > 0) {
+          if(value > maxDistance) {
+            maxDistance = value;
+          }
+    
+          if(value < maxDistance - 10) {
+            distanceValue = value;
+          }
+        }
+      }
+    }
+  #endif
 
   SerialAction action = unknownAction;
 
   if (Serial.available() > 0) {
     Serial.println("\n\nparse command");
+   
     action = intToAction(Serial.parseInt());
 
     if (action == unknownAction) {
@@ -287,20 +327,12 @@ void performAction(SerialAction action) {
       groups[nr].waitFrames = 0;
 
       break;
+      
     case hideAllGroupsAction:
       nr = Serial.parseInt();
 
       for(int i = 0; i<TOTAL_GROUPS; i++) {
-        if(groups[i].hidePercent < nr) {
-          continue;
-        }
-
-        groups[i].hidePercent = nr;
-
-        groups[i].animation = &hide;
-        groups[i].selection = &hideStrategy;
-        groups[i].counter = 0;
-        groups[i].waitFrames = 0;
+        hideGroup(i, nr);
       }
 
       break;
@@ -324,12 +356,17 @@ void performAction(SerialAction action) {
         groups[i].waitFrames = 0;
       }
 
-      enableStamina();
+      #if HAS_AUDIO_SENSOR
+        enableStamina();
+      #endif
+      
       break;
 
     case staminaAction:
+      #if HAS_AUDIO_SENSOR
+        enableStamina();
+      #endif
 
-      enableStamina();
       break;
 
     case colorAction:
@@ -343,10 +380,20 @@ void performAction(SerialAction action) {
       blue = Serial.parseInt();
 
       setCurrentColor(createColor(red, green, blue));
+      
+      #if ENABLE_RANDOM_COLOR
+        lastRandomTime = millis();
+      #endif
+
       break;
 
     case colorRawAction:
       setCurrentColor(Serial.parseInt());
+      
+      #if ENABLE_RANDOM_COLOR
+        lastRandomTime = millis();
+      #endif
+
       break;
 
     case reportAction:
@@ -354,13 +401,13 @@ void performAction(SerialAction action) {
 
       Serial.println("BEGIN REPORT");
 
-      Serial.print("audio loop: `");
-      Serial.println(audioLoopEnabled ? "on`" : "off`");
-
-      Serial.print("isDark: ");
-      Serial.println(isDark);
-      Serial.println();
-
+      #if HAS_AUDIO_SENSOR
+        Serial.print("audio loop: `");
+        Serial.println(audioLoopEnabled ? "on`" : "off`");
+      #else
+        Serial.print("audio loop: disabled (no audio sensor)`");
+      #endif
+      
       Serial.print("current color ");
 
       Serial.print(Red(currentColor));
@@ -372,30 +419,39 @@ void performAction(SerialAction action) {
       Serial.println(getCurrentColor());
       Serial.println("");
 
-      Serial.print("next color in ");
-      Serial.print(1080000 - millis() - lastRandomTime);
-      Serial.println(" milliseconds");
-      Serial.println("");
-
-      Serial.print("distance sensor cm");
-      Serial.println(0);//distanceSensor.RangeInCentimeters);
-
-      Serial.print("audio sensor ");
-      Serial.println(soundValue);
-
-      Serial.print("audio threshold ");
-      Serial.println(soundThreshold);
-      Serial.print("audio stamina: ");
-
-      if (isStamina()) {
-        Serial.println("enabled");
-
-        Serial.print("Stamina left: ");
-        Serial.print(staminaEnd - millis());
+      #if ENABLE_RANDOM_COLOR
+        Serial.print("next color in ");
+        Serial.print(1080000 - millis() - lastRandomTime);
         Serial.println(" milliseconds");
-      } else {
-        Serial.println("disabled");
-      }
+        Serial.println("");
+      #else
+        Serial.print("RANDOM COLOR DISABLED");
+        Serial.println("");
+      #endif
+
+      #if HAS_DISTANCE_SENSOR
+        Serial.print("distance sensor cm");
+        Serial.println(distanceValue);
+      #endif
+      
+      #if HAS_AUDIO_SENSOR
+        Serial.print("audio sensor ");
+        Serial.println(soundValue);
+  
+        Serial.print("audio threshold ");
+        Serial.println(soundThreshold);
+        Serial.print("audio stamina: ");
+  
+        if (isStamina()) {
+          Serial.println("enabled");
+  
+          Serial.print("Stamina left: ");
+          Serial.print(staminaEnd - millis());
+          Serial.println(" milliseconds");
+        } else {
+          Serial.println("disabled");
+        }
+      #endif
 
       Serial.println("");
 
@@ -432,19 +488,31 @@ void performAction(SerialAction action) {
 
     case audioThresholdAction:
       Serial.println("Enter the new audio threshold");
-      soundThreshold = Serial.parseInt();
-
+      #if HAS_AUDIO_SENSOR
+        soundThreshold = Serial.parseInt();
+      #else
+        Serial.parseInt();
+      #endif
+      
       break;
 
     case queryAudio:
       Serial.print("audio-level:");
-      Serial.print(soundValue);
+      #if HAS_AUDIO_SENSOR
+        Serial.print(soundValue);
+      #else
+        Serial.print(0);
+      #endif
       Serial.print("\n");
       break;
 
     case distanceMeasurementAction:
       Serial.print("distance to object in cm: ");
-      Serial.print(0);//distanceSensor.RangeInCentimeters);
+      #if HAS_DISTANCE_SENSOR
+        Serial.print(distanceValue);
+      #else 
+        Serial.print(0);
+      #endif
       Serial.print("\n");
       break;
 
@@ -462,7 +530,7 @@ void performAction(SerialAction action) {
 
   Serial.println("Done");
   while (Serial.available() > 0) Serial.read();
-  Serial.setTimeout(50);
+  Serial.setTimeout(10);
 }
 
 SerialAction intToAction(int value) {
