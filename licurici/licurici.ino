@@ -18,14 +18,17 @@ enum SerialAction {
   flickerAction,
   roadAction,
   hideAction,
+  hideAllGroupsAction,
   happyAction,
   colorAction,
+  colorRawAction,
   reportAction,
   allHappyAction,
   staminaAction,
   audioThresholdAction,
   queryAudio,
   distanceMeasurementAction,
+  setHilightFlicker,
   unknownAction
 };
 
@@ -163,6 +166,9 @@ void audioLoop() {
 
     int percent = min(100, (soundValue - localThreshold) / 4);
 
+    Serial.print("hide:");
+    Serial.println(percent);
+
     for (int i = 0; i < TOTAL_GROUPS; i++)
     {
       hideGroup(i, percent);
@@ -202,7 +208,7 @@ void loop() {
   }
 
   audioLoop();
-  
+
   if (millis() - lastRandomTime >= 1080000) {
     lastRandomTime = millis();
     randomColor();
@@ -210,12 +216,12 @@ void loop() {
 
   if (groups[0].isAnimation(&show) || groups[0].isAnimation(&flicker)) {
     if (millis() - oldDistanceTime >= 500) {
-      distanceSensor.MeasureInCentimeters();
-      setFlickerIntensity(intensityFromDistance(distanceSensor.RangeInCentimeters));
+      //distanceSensor.MeasureInCentimeters();
+      //setFlickerIntensity(intensityFromDistance(distanceSensor.RangeInCentimeters));
       oldDistanceTime = millis();
-      Serial.print(distanceSensor.RangeInCentimeters);
-      Serial.print(" ");
-      Serial.println(intensityFromDistance(distanceSensor.RangeInCentimeters));
+      //Serial.print(distanceSensor.RangeInCentimeters);
+      //Serial.print(" ");
+      //Serial.println(intensityFromDistance(distanceSensor.RangeInCentimeters));
     }
   }
 
@@ -281,6 +287,23 @@ void performAction(SerialAction action) {
       groups[nr].waitFrames = 0;
 
       break;
+    case hideAllGroupsAction:
+      nr = Serial.parseInt();
+
+      for(int i = 0; i<TOTAL_GROUPS; i++) {
+        if(groups[i].hidePercent < nr) {
+          continue;
+        }
+
+        groups[i].hidePercent = nr;
+
+        groups[i].animation = &hide;
+        groups[i].selection = &hideStrategy;
+        groups[i].counter = 0;
+        groups[i].waitFrames = 0;
+      }
+
+      break;
 
     case happyAction:
       Serial.println("Select happy group");
@@ -320,7 +343,10 @@ void performAction(SerialAction action) {
       blue = Serial.parseInt();
 
       setCurrentColor(createColor(red, green, blue));
+      break;
 
+    case colorRawAction:
+      setCurrentColor(Serial.parseInt());
       break;
 
     case reportAction:
@@ -345,14 +371,14 @@ void performAction(SerialAction action) {
       Serial.print(" = ");
       Serial.println(getCurrentColor());
       Serial.println("");
-      
+
       Serial.print("next color in ");
       Serial.print(1080000 - millis() - lastRandomTime);
       Serial.println(" milliseconds");
       Serial.println("");
 
       Serial.print("distance sensor cm");
-      Serial.println(distanceSensor.RangeInCentimeters);
+      Serial.println(0);//distanceSensor.RangeInCentimeters);
 
       Serial.print("audio sensor ");
       Serial.println(soundValue);
@@ -370,7 +396,6 @@ void performAction(SerialAction action) {
       } else {
         Serial.println("disabled");
       }
-
 
       Serial.println("");
 
@@ -419,10 +444,18 @@ void performAction(SerialAction action) {
 
     case distanceMeasurementAction:
       Serial.print("distance to object in cm: ");
-      Serial.print(distanceSensor.RangeInCentimeters);
+      Serial.print(0);//distanceSensor.RangeInCentimeters);
       Serial.print("\n");
       break;
-    
+
+    case setHilightFlicker:
+      for (int i = 0; i < TOTAL_GROUPS; i++) {
+        groups[i].animation = &hilightFlicker;
+        groups[i].selection = &flickerStrategy;
+        groups[i].counter = 0;
+        groups[i].waitFrames = 0;
+      }
+
     default:
       break;
   }
@@ -469,6 +502,15 @@ SerialAction intToAction(int value) {
 
     case 12:
       return distanceMeasurementAction;
+
+    case 13:
+      return setHilightFlicker;
+
+    case 14:
+      return hideAllGroupsAction;
+
+    case 15:
+      return colorRawAction;
 
     default:
       break;

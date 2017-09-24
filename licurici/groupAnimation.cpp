@@ -10,8 +10,8 @@ void setFlickerIntensity(byte intensity) {
 
 void randomColor() {
   int index = random(0, 7);
-  Serial.print("Selected color ");
-  Serial.println(index);
+  Serial.print("color:");
+  Serial.println(availableColors[index]);
   currentColor = availableColors[index];
 }
 
@@ -60,7 +60,7 @@ void selectFlickerLeds(LedGroup* group, int i) {
   while(group->isPixelAnimated(selected)) {
     selected = random(0, group->length);
   }
-    
+
   group->animatingPixel[i] = selected;
 }
 
@@ -72,7 +72,7 @@ void setProportionalTargetColor(LedGroup* group, int i) {
   group->targetColors[i] = createColor(r, g, b);
 }
 
-void flicker(LedGroup* group) {
+void baseFlicker(LedGroup* group) {
 
   for(int i=0; i<group->selectionLen; i++) {
 
@@ -91,11 +91,21 @@ void flicker(LedGroup* group) {
         selectFlickerLeds(group, i);
         group->pixelState[i] = 0;
         break;
-        
+
       default:
         updateState(group, i, i);
     }
   }
+}
+
+void hilightFlicker(LedGroup* group) {
+  colorIntensity = 100;
+  baseFlicker(group);
+}
+
+void flicker(LedGroup* group) {
+  colorIntensity = 30;
+  baseFlicker(group);
 }
 
 void flickerStrategy(LedGroup* group) {
@@ -119,7 +129,7 @@ void selectRoadLeds(LedGroup* group) {
 
 int nextUnselected(LedGroup* group) {
   int last = 0;
-  
+
   for(int i=0;i<group->selectionLen; i++) {
     if(group->animatingPixel[i] > last) {
       last = group->animatingPixel[i];
@@ -131,7 +141,7 @@ int nextUnselected(LedGroup* group) {
 
 int firstUnselected(LedGroup* group) {
   int first = 100;
-  
+
   for(int i=0;i<group->selectionLen; i++) {
     if(group->animatingPixel[i] < first) {
       first = group->animatingPixel[i];
@@ -155,7 +165,7 @@ void happy(LedGroup* group) {
       group->targetColors[i] = highColor1;
       group->pixelState[i]++;
       break;
-    
+
     case 1:
       updateState(group, i, i);
       break;
@@ -169,23 +179,23 @@ void happy(LedGroup* group) {
 
       group->targetColors[i] = highColor2;
       group->pixelState[i]++;
-      
+
       break;
-    
+
     case 3:
       updateState(group, i, i);
       break;
-    
+
     case 4:
       group->targetColors[i] = currentColor;
       group->pixelState[i]++;
       break;
-    
+
     case 5:
       updateState(group, i, i);
       break;
-      
-    default:  
+
+    default:
       group->pixelState[i] = 0;
       group->animatingPixel[i] = nextUnselected(group);
 
@@ -206,7 +216,7 @@ void happyStrategy(LedGroup* group) {
     group->increment[i][0] = 10;
     group->increment[i][1] = 10;
     group->increment[i][2] = 10;
- 
+
     group->animatingPixel[i] = 0;
     group->pixelState[0] = 0;
   }
@@ -215,7 +225,7 @@ void happyStrategy(LedGroup* group) {
 void selectHideLed(LedGroup* group, int i) {
   int selected = random(0, group->length);
   int index = 0;
-  
+
   if(group->percentHidden() >= group->hidePercent) {
     group->waitFrames = 100;
     group->animationDone = true;
@@ -241,7 +251,7 @@ void selectHideLed(LedGroup* group, int i) {
   if(index == 10) {
     group->waitFrames = 100;
   }
-    
+
   group->animatingPixel[i] = selected;
 }
 
@@ -252,12 +262,12 @@ void hide(LedGroup* group) {
           group->targetColors[i] = 0;
           group->pixelState[i]++;
           break;
-  
+
         case 2:
           selectHideLed(group, i);
           group->pixelState[i] = 0;
           break;
-          
+
         default:
           updateState(group, i, i);
      }
@@ -270,7 +280,7 @@ void hideStrategy(LedGroup* group) {
 
   for(int i=0;i<group->selectionLen; i++) {
     group->pixelState[i] = 2;
-    
+
     byte proportion = random(1, 5);
 
     group->increment[i][0] = Red(currentColor) / proportion;
@@ -282,12 +292,12 @@ void hideStrategy(LedGroup* group) {
 void selectShowLed(LedGroup* group, int i) {
   int selected = random(0, group->length);
   int index = 0;
-  
+
   if(group->percentHidden() == 0) {
     group->animation = flicker;
     group->selection = flickerStrategy;
     group->counter = 0;
-    
+
     return;
   }
 
@@ -310,13 +320,13 @@ void selectShowLed(LedGroup* group, int i) {
   if(index == 10) {
     group->waitFrames = 100;
   }
-    
+
   group->animatingPixel[i] = selected;
 }
 
 void showLed(LedGroup* group, int i) {
   int index = random(1, 3);
-  
+
   byte r = min(Red(currentColor) + index, Red(currentColor));
   byte g = min(Green(currentColor) + index, Green(currentColor));
   byte b = min(Blue(currentColor) + index, Blue(currentColor));
@@ -332,12 +342,12 @@ void show(LedGroup* group) {
           showLed(group, i);
           group->pixelState[i]++;
           break;
-  
+
         case 2:
           selectShowLed(group, i);
           group->pixelState[i] = 0;
           break;
-          
+
         default:
           updateState(group, i, i);
      }
