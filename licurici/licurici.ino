@@ -1,12 +1,12 @@
-#include <Ultrasonic.h>
+  #include <Ultrasonic.h>
 #include <Adafruit_NeoPixel.h>
 
 #include "group.h"
 #include "groupAnimation.h"
 
-#define HAS_AUDIO_SENSOR false
-#define HAS_DISTANCE_SENSOR false
-#define ENABLE_RANDOM_COLOR false
+#define HAS_AUDIO_SENSOR true
+#define HAS_DISTANCE_SENSOR true
+#define ENABLE_RANDOM_COLOR true
 
 const uint8_t dataPin  = 2;    // Yellow wire on Adafruit Pixels
 const uint8_t clockPin = 3;    // Green wire on Adafruit Pixels
@@ -37,7 +37,7 @@ enum SerialAction {
 };
 
 #if HAS_DISTANCE_SENSOR
-  Ultrasonic distanceSensor(7);
+  Ultrasonic distanceSensor(7, 8);
   
   long oldDistanceTime = 0;
   
@@ -59,8 +59,9 @@ enum SerialAction {
   bool audioLoopEnabled = false;
 #endif
 
-unsigned long hideTimestamp;
+unsigned long hideTimestamp = 0;
 long oldTime = 0;
+long hilightFlickerTimeout = 0;
 
 #if ENABLE_RANDOM_COLOR
   long lastRandomTime = 0;
@@ -247,10 +248,11 @@ void loop() {
 
   #if HAS_DISTANCE_SENSOR
     if (groups[0].isAnimation(&show) || groups[0].isAnimation(&flicker)) {
-      if (millis() - oldDistanceTime >= 400) {
+      if (millis() - oldDistanceTime >= 100) {
         oldDistanceTime = millis();
           
         int value = distanceSensor.distanceRead();
+       
         if(value > 0) {
           if(value > maxDistance) {
             maxDistance = value;
@@ -263,6 +265,20 @@ void loop() {
       }
     }
   #endif
+
+  
+  bool flickerTimeout = millis() - hilightFlickerTimeout > 60 * 1000; // 1 minute for the hilight flicker
+
+  for (int i = 0; i < TOTAL_GROUPS; i++) {
+    if (flickerTimeout && groups[i].isAnimation(&hilightFlicker)) {
+      Serial.print("Hilight flicker timeout for group");
+      Serial.println(1);
+      groups[i].animation = &flicker;
+      groups[i].selection = &flickerStrategy;
+      groups[i].counter = 0;
+      groups[i].waitFrames = 0;
+    }
+  }
 
   SerialAction action = unknownAction;
 
@@ -517,11 +533,15 @@ void performAction(SerialAction action) {
       break;
 
     case setHilightFlicker:
+      hilightFlickerTimeout = millis();
+
       for (int i = 0; i < TOTAL_GROUPS; i++) {
-        groups[i].animation = &hilightFlicker;
-        groups[i].selection = &flickerStrategy;
-        groups[i].counter = 0;
-        groups[i].waitFrames = 0;
+        if (groups[i].isAnimation(&flicker) || groups[i].isAnimation(&hilightFlicker)) {
+          groups[i].animation = &hilightFlicker;
+          groups[i].selection = &flickerStrategy;
+          groups[i].counter = 0;
+          groups[i].waitFrames = 0;
+        }
       }
 
     default:
