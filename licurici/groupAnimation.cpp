@@ -10,6 +10,16 @@ void randomColor() {
   currentColor = availableColors[index];
 }
 
+void swapCurrentColor() {
+  byte r = Red(currentColor);
+  byte g = Green(currentColor);
+  byte b = Blue(currentColor);
+  
+  currentColor = createColor(b, r,g);
+  Serial.print("color:");
+  Serial.println(currentColor);
+}
+
 void setCurrentColor(Color color) {
   currentColor = color;
 }
@@ -24,8 +34,8 @@ void updateState(LedGroup* group, int i, int state) {
   }
 }
 
-void flickerSelectColor(LedGroup* group, int i) {
-  float proportion = random(2, 7);
+void flickerSelectColor(LedGroup* group, int i, int min_, int max_) {
+  float proportion = random(min_, max_);
   float fr = Red(currentColor);
   float fg = Green(currentColor);
   float fb = Blue(currentColor);
@@ -68,13 +78,17 @@ void setProportionalTargetColor(LedGroup* group, int i, float colorIntensity) {
   group->targetColors[i] = createColor(r, g, b);
 }
 
-void baseFlicker(LedGroup* group, int intensity) {
 
+void setDark(LedGroup* group, int i) {
+  group->targetColors[i] = createColor(0, 0, 0);
+}
+
+void baseFlicker(LedGroup* group, int intensity) {
   for(int i=0; i<group->selectionLen; i++) {
 
     switch(group->pixelState[i]) {
       case 0:
-        flickerSelectColor(group, i);
+        flickerSelectColor(group, i, 2, 9);
         group->pixelState[i]++;
         break;
 
@@ -95,7 +109,56 @@ void baseFlicker(LedGroup* group, int intensity) {
 }
 
 void hilightFlicker(LedGroup* group) {
-  baseFlicker(group, 400);
+    for(int i=0; i<group->selectionLen; i++) {
+
+    switch(group->pixelState[i]) {
+      case 0:
+        setDark(group, i);
+        group->pixelState[i]++;
+        break;
+        
+      case 2:
+        selectVisibleLed(group, i);
+        break;
+        
+      case 3:
+        setProportionalTargetColor(group, i, 400);
+        group->pixelState[i]++;
+        break;
+
+      case 5:
+        flickerSelectColor(group, i, 2, 3);
+            
+        group->increment[i][0] = 5;
+        group->increment[i][1] = 5;
+        group->increment[i][2] = 5;
+        
+        group->pixelState[i]++;
+        break;
+
+      case 7:
+        selectHiddenLed(group, i);
+        
+        //selectFlickerLeds(group, i);
+        //group->pixelState[i] = 3;
+        break;
+      
+      default:
+        updateState(group, i, i);
+    }
+  }
+}
+
+void hilightFlickerStrategy(LedGroup* group) {
+  group->selectionLen = 10;
+
+  for(int i=0; i<group->selectionLen; i++) {
+    group->pixelState[i] = 0;
+    group->animatingPixel[i] = random(0, group->length);
+    group->increment[i][0] = 5;
+    group->increment[i][1] = 5;
+    group->increment[i][2] = 5;
+  }
 }
 
 void flicker(LedGroup* group) {
@@ -214,6 +277,93 @@ void happyStrategy(LedGroup* group) {
     group->animatingPixel[i] = 0;
     group->pixelState[0] = 0;
   }
+}
+
+void selectHiddenLed(LedGroup* group, int i) {
+  int totalVisible = 0;
+
+  for(int j=0; j<group->length; j++) {
+    if(!group->isHidden(j)) {
+      totalVisible++;
+    }
+  }
+
+  if(totalVisible == group->length) {
+    
+    for(int j=0; j<10; j++) {
+      group->pixelState[j] = 0;  
+      group->animatingPixel[j] = random(0, group->length);
+      group->increment[j][0] = 1;
+      group->increment[j][1] = 1;
+      group->increment[j][2] = 1;
+    }
+    return;
+  }
+
+  int selected = 0;
+  int index = 0;
+
+  while(!group->isHidden(selected) || index == 10) {
+    selected = random(0, group->length);
+    index++;
+  }
+  
+  //group->selectionLen = min(10, totalVisible);
+
+  if(index == 10) {
+    for(int j=0; j<group->length; j++) {
+      if(group->isHidden(j)) {
+        selected = j;
+      }
+    }
+  }
+
+  group->pixelState[i] = 3;
+  group->animatingPixel[i] = selected;
+}
+
+void selectVisibleLed(LedGroup* group, int i) {
+  int totalVisible = 0;
+
+  for(int j=0; j<group->length; j++) {
+    if(!group->isHidden(j)) {
+      totalVisible++;
+    }
+  }
+  
+  if(totalVisible == 0) {
+    for(int j=0; j<10; j++) {
+      group->pixelState[j] = 3;  
+      group->animatingPixel[j] = random(0, group->length);
+      group->increment[j][0] = 5;
+      group->increment[j][1] = 5;
+      group->increment[j][2] = 5;
+    }
+    
+    group->selectionLen = 10;
+    return;
+  }
+
+  int selected = 0;
+  int index = 0;
+  
+  while(group->isHidden(selected) || index == 10) {
+    selected = random(0, group->length);
+    index++;
+  }
+  
+  //group->selectionLen = min(10, totalVisible);
+
+  if(index == 10) {
+    for(int j=0; j<group->length; j++) {
+      if(!group->isHidden(j)) {
+        selected = j;
+      }
+    }
+  }
+
+  group->pixelState[i] = 0;
+  group->animatingPixel[i] = selected;
 }
 
 void selectHideLed(LedGroup* group, int i) {

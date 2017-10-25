@@ -4,9 +4,9 @@
 #include "group.h"
 #include "groupAnimation.h"
 
-#define HAS_AUDIO_SENSOR true
-#define HAS_DISTANCE_SENSOR true
-#define ENABLE_RANDOM_COLOR true
+#define HAS_AUDIO_SENSOR false
+#define HAS_DISTANCE_SENSOR false
+#define ENABLE_RANDOM_COLOR false
 
 const uint8_t dataPin  = 2;    // Yellow wire on Adafruit Pixels
 const uint8_t clockPin = 3;    // Green wire on Adafruit Pixels
@@ -49,7 +49,7 @@ enum SerialAction {
   const int audioPin = A0;
   const int soundAverage = 340;
   
-  int soundThreshold = 70;
+  int soundThreshold = 140;
   int soundValue;
   unsigned long maxAudioPeek = 40;
   
@@ -252,7 +252,7 @@ void loop() {
         oldDistanceTime = millis();
           
         int value = distanceSensor.distanceRead();
-       
+
         if(value > 0) {
           if(value > maxDistance) {
             maxDistance = value;
@@ -267,12 +267,12 @@ void loop() {
   #endif
 
   
-  bool flickerTimeout = millis() - hilightFlickerTimeout > 60 * 1000; // 1 minute for the hilight flicker
-
+  bool flickerTimeout = millis() - hilightFlickerTimeout > 20000; // 20 seconds for the hilight flicker
+  
   for (int i = 0; i < TOTAL_GROUPS; i++) {
     if (flickerTimeout && groups[i].isAnimation(&hilightFlicker)) {
       Serial.print("Hilight flicker timeout for group");
-      Serial.println(1);
+      Serial.println(i);
       groups[i].animation = &flicker;
       groups[i].selection = &flickerStrategy;
       groups[i].counter = 0;
@@ -534,14 +534,13 @@ void performAction(SerialAction action) {
 
     case setHilightFlicker:
       hilightFlickerTimeout = millis();
+      swapCurrentColor();
 
       for (int i = 0; i < TOTAL_GROUPS; i++) {
-        if (groups[i].isAnimation(&flicker) || groups[i].isAnimation(&hilightFlicker)) {
-          groups[i].animation = &hilightFlicker;
-          groups[i].selection = &flickerStrategy;
-          groups[i].counter = 0;
-          groups[i].waitFrames = 0;
-        }
+        groups[i].animation = &hilightFlicker;
+        groups[i].selection = &hilightFlickerStrategy;
+        groups[i].counter = 0;
+        groups[i].waitFrames = 0;
       }
 
     default:

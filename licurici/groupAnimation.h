@@ -8,8 +8,14 @@ void setFlickerIntensity(byte intensity);
 void setCurrentColor(Color color);
 Color getCurrentColor();
 void randomColor();
+void swapCurrentColor();
 
 void hilightFlicker(LedGroup* group);
+void hilightFlickerStrategy(LedGroup* group);
+
+void selectHiddenLed(LedGroup* group, int i);
+void selectVisibleLed(LedGroup* group, int i);
+
 void flicker(LedGroup* group);
 void flickerStrategy(LedGroup* group);
 
