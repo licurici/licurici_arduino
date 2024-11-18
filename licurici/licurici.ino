@@ -1,40 +1,30 @@
-  #include <Ultrasonic.h>
 #include <Adafruit_NeoPixel.h>
+#include "types.h"
 
 #include "group.h"
 #include "groupAnimation.h"
 
 #define HAS_AUDIO_SENSOR false
+#define HAS_BUZZER true
 #define HAS_DISTANCE_SENSOR false
-#define ENABLE_RANDOM_COLOR false
+#define ENABLE_RANDOM_COLOR true
+#define HAS_WIFI true
 
-const uint8_t dataPin  = 2;    // Yellow wire on Adafruit Pixels
-const uint8_t clockPin = 3;    // Green wire on Adafruit Pixels
+#if HAS_DISTANCE_SENSOR
+  #include <Ultrasonic.h>
+#endif
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(200, 2, NEO_RGB + NEO_KHZ800);
+#if HAS_WIFI
+  #include "wifi.h"
+#endif
 
-#define TOTAL_GROUPS 4
+#if HAS_BUZZER 
+  #include "sound.h"
+#endif
+
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(100, 2, NEO_RGB + NEO_KHZ800);
 
 LedGroup groups[TOTAL_GROUPS];
-
-enum SerialAction {
-  showAction,
-  flickerAction,
-  roadAction,
-  hideAction,
-  hideAllGroupsAction,
-  happyAction,
-  colorAction,
-  colorRawAction,
-  reportAction,
-  allHappyAction,
-  staminaAction,
-  audioThresholdAction,
-  queryAudio,
-  distanceMeasurementAction,
-  setHilightFlicker,
-  unknownAction
-};
 
 #if HAS_DISTANCE_SENSOR
   Ultrasonic distanceSensor(7, 8);
@@ -68,9 +58,19 @@ long hilightFlickerTimeout = 0;
 #endif
 
 void setup() {
+  #if HAS_BUZZER 
+    onSound();
+  #endif
+
+  while (!Serial);
+
   delay(2000);
 
   Serial.begin(9600);
+
+  #if HAS_BUZZER 
+    initSound();
+  #endif
 
   #if HAS_AUDIO_SENSOR
     randomSeed(analogRead(audioPin));
@@ -82,19 +82,305 @@ void setup() {
     lastRandomTime = 0;
   #endif
 
+  #if HAS_WIFI
+    setup_WiFi();
+    connectedSound();
+  #endif
+
   strip.begin();
   strip.show();
 
   Serial.println("Setup strips");
 
-  groups[0].setup(&strip, 0, 50);
-  groups[1].setup(&strip, 50, 50);
-  groups[2].setup(&strip, 100, 50);
-  groups[3].setup(&strip, 150, 50);
+  for (int i = 0; i < TOTAL_GROUPS; i++)
+  {
+    groups[i].setup(&strip, i * 50, 50);
+  }
 
   resetAnimations();
 
   Serial.println("Start loop");
+  #if HAS_BUZZER 
+  readySound();
+  #endif
+}
+
+void serialPrintStr(const char message[]) {
+  Serial.print(message);
+}
+
+void serialPrintInt(int value) {
+  Serial.print(value);
+}
+
+int serialReadInt() {
+  return Serial.parseInt();
+}
+
+void flushReport(StringOut printStr, IntOut printInt) {
+  auto currentColor = getCurrentColor();
+
+  printStr("BEGIN REPORT\n");
+
+  #if HAS_AUDIO_SENSOR
+    printStr("audio loop: `");
+    printStr(audioLoopEnabled ? "on`" : "off`");
+  #else
+    printStr("audio loop: disabled (no audio sensor)");
+  #endif
+  printStr("\n");
+  
+  printStr("current color ");
+
+  printInt(Red(currentColor));
+  printStr(" ");
+  printInt(Green(currentColor));
+  printStr(" ");
+  printInt(Blue(currentColor));
+  printStr(" = ");
+  printInt(getCurrentColor());
+  printStr("\n");
+  printStr("");
+  printStr("\n");
+
+  #if ENABLE_RANDOM_COLOR
+    printStr("next color in ");
+    printInt(1080000 - millis() - lastRandomTime);
+    printStr(" milliseconds");
+    printStr("\n\n");
+  #else
+    printStr("RANDOM COLOR DISABLED");
+    printStr("\n");
+  #endif
+
+  #if HAS_DISTANCE_SENSOR
+    printStr("distance sensor cm");
+    printInt(distanceValue);
+    printStr("\n");
+  #endif
+  
+  #if HAS_AUDIO_SENSOR
+    printStr("audio sensor ");
+    printInt(soundValue);
+    printStr("\n");
+
+    printStr("audio threshold ");
+    printInt(soundThreshold);
+    printStr("\n");
+    printStr("audio stamina: ");
+
+    if (isStamina()) {
+      printStr("enabled");
+      printStr("\n");
+
+      printStr("Stamina left: ");
+      printInt(staminaEnd - millis());
+      printStr(" milliseconds");
+      printStr("\n");
+    } else {
+      printStr("disabled\n");
+    }
+  #endif
+
+  printStr("\n");
+
+  printStr("groups ");
+  printInt(TOTAL_GROUPS);
+  printStr("\n");
+
+  printStr("leds ");
+  printStr(strip.numPixels());
+  printStr("\n\n");
+
+  for (int i = 0; i < TOTAL_GROUPS; i++) {
+    printStr("*Group ");
+    printInt(i);
+    printStr("*");
+    printStr("\n");
+
+    printStr(" leds ");
+    printInt(groups[i].length);
+    printStr("\n");
+
+    printStr(" start at ");
+    printInt(groups[i].start);
+    printStr("\n");
+
+    printStr(" visible ");
+    printInt(100 - groups[i].percentHidden());
+    printStr("%");
+    printStr("\n");
+
+    printStr(" animation ");
+    printStr(stringAnimation(&groups[i]));
+    printStr("\n\n");
+  }
+
+  printStr("END REPORT\n");
+}
+
+void performAction(SerialAction action, StringOut printStr, IntOut printInt, IntIn readInt) {
+  int nr;
+  byte red;
+  byte green;
+  byte blue;
+  Color currentColor;
+
+  switch (action) {
+    case showAction:
+      printStr("Select show group\n");
+      nr = readInt();
+
+      groups[nr].animation = &show;
+      groups[nr].selection = &showStrategy;
+      groups[nr].counter = 0;
+      groups[nr].waitFrames = 0;
+
+      break;
+
+    case flickerAction:
+      printStr("Select flicker group\n");
+      nr = readInt();
+
+      groups[nr].animation = &flicker;
+      groups[nr].selection = &flickerStrategy;
+      groups[nr].counter = 0;
+      groups[nr].waitFrames = 0;
+
+      break;
+
+    case hideAction:
+      printStr("Select hide group\n");
+      nr = readInt();
+
+      printStr("Select hide percent\n");
+      groups[nr].hidePercent = readInt();
+
+      groups[nr].animation = &hide;
+      groups[nr].selection = &hideStrategy;
+      groups[nr].counter = 0;
+      groups[nr].waitFrames = 0;
+
+      break;
+      
+    case hideAllGroupsAction:
+      nr = readInt();
+
+      for(int i = 0; i<TOTAL_GROUPS; i++) {
+        hideGroup(i, nr);
+      }
+
+      break;
+
+    case happyAction:
+      printStr("Select happy group\n");
+      nr = readInt();
+
+      groups[nr].animation = &happy;
+      groups[nr].selection = &happyStrategy;
+      groups[nr].counter = 0;
+      groups[nr].waitFrames = 0;
+
+      break;
+
+    case allHappyAction:
+      for (int i = 0; i < TOTAL_GROUPS; i++) {
+        groups[i].animation = &happy;
+        groups[i].selection = &happyStrategy;
+        groups[i].counter = 0;
+        groups[i].waitFrames = 0;
+      }
+
+      #if HAS_AUDIO_SENSOR
+        enableStamina();
+      #endif
+      
+      break;
+
+    case staminaAction:
+      #if HAS_AUDIO_SENSOR
+        enableStamina();
+      #endif
+
+      break;
+
+    case colorAction:
+      printStr("red\n");
+      red = readInt();
+
+      printStr("green\n");
+      green = readInt();
+
+      printStr("blue\n");
+      blue = readInt();
+
+      setCurrentColor(createColor(red, green, blue));
+      
+      #if ENABLE_RANDOM_COLOR
+        lastRandomTime = millis();
+      #endif
+
+      break;
+
+    case colorRawAction:
+      setCurrentColor(readInt());
+      
+      #if ENABLE_RANDOM_COLOR
+        lastRandomTime = millis();
+      #endif
+
+      break;
+
+    case reportAction:
+      flushReport(&serialPrintStr, &serialPrintInt);
+      break;
+
+    case audioThresholdAction:
+      Serial.println("Enter the new audio threshold");
+      #if HAS_AUDIO_SENSOR
+        soundThreshold = readInt();
+      #else
+        readInt();
+      #endif
+      
+      break;
+
+    case queryAudio:
+      printStr("audio-level:");
+      #if HAS_AUDIO_SENSOR
+        printInt(soundValue);
+      #else
+        printInt(0);
+      #endif
+      printStr("\n");
+      break;
+
+    case distanceMeasurementAction:
+      printStr("distance to object in cm: ");
+      #if HAS_DISTANCE_SENSOR
+        printInt(distanceValue);
+      #else 
+        printInt(0);
+      #endif
+      printStr("\n");
+      break;
+
+    case setHilightFlicker:
+      hilightFlickerTimeout = millis();
+      swapCurrentColor();
+
+      for (int i = 0; i < TOTAL_GROUPS; i++) {
+        groups[i].animation = &hilightFlicker;
+        groups[i].selection = &hilightFlickerStrategy;
+        groups[i].counter = 0;
+        groups[i].waitFrames = 0;
+      }
+
+    default:
+      break;
+  }
+
+  printStr("Done\n");
 }
 
 void resetAnimations() {
@@ -266,6 +552,9 @@ void loop() {
     }
   #endif
 
+  #if HAS_WIFI
+    loop_WiFi(*flushReport, *performAction);
+  #endif
   
   bool flickerTimeout = millis() - hilightFlickerTimeout > 20000; // 20 seconds for the hilight flicker
   
@@ -292,264 +581,14 @@ void loop() {
     }
 
     if (action != unknownAction) {
-      performAction(action);
+      Serial.setTimeout(5000);
+      performAction(action, serialPrintStr, serialPrintInt, serialReadInt);
+
+      while (Serial.available() > 0) Serial.read();
+      Serial.setTimeout(10);
       action = unknownAction;
     }
   }
-}
-
-void performAction(SerialAction action) {
-  int nr;
-  byte red;
-  byte green;
-  byte blue;
-  Color currentColor;
-
-  Serial.setTimeout(5000);
-
-  switch (action) {
-    case showAction:
-      Serial.println("Select show group");
-      nr = Serial.parseInt();
-
-      groups[nr].animation = &show;
-      groups[nr].selection = &showStrategy;
-      groups[nr].counter = 0;
-      groups[nr].waitFrames = 0;
-
-      break;
-
-    case flickerAction:
-      Serial.println("Select flicker group");
-      nr = Serial.parseInt();
-
-      groups[nr].animation = &flicker;
-      groups[nr].selection = &flickerStrategy;
-      groups[nr].counter = 0;
-      groups[nr].waitFrames = 0;
-
-      break;
-
-    case hideAction:
-      Serial.println("Select hide group");
-      nr = Serial.parseInt();
-
-      Serial.println("Select hide percent");
-      groups[nr].hidePercent = Serial.parseInt();
-
-      groups[nr].animation = &hide;
-      groups[nr].selection = &hideStrategy;
-      groups[nr].counter = 0;
-      groups[nr].waitFrames = 0;
-
-      break;
-      
-    case hideAllGroupsAction:
-      nr = Serial.parseInt();
-
-      for(int i = 0; i<TOTAL_GROUPS; i++) {
-        hideGroup(i, nr);
-      }
-
-      break;
-
-    case happyAction:
-      Serial.println("Select happy group");
-      nr = Serial.parseInt();
-
-      groups[nr].animation = &happy;
-      groups[nr].selection = &happyStrategy;
-      groups[nr].counter = 0;
-      groups[nr].waitFrames = 0;
-
-      break;
-
-    case allHappyAction:
-      for (int i = 0; i < TOTAL_GROUPS; i++) {
-        groups[i].animation = &happy;
-        groups[i].selection = &happyStrategy;
-        groups[i].counter = 0;
-        groups[i].waitFrames = 0;
-      }
-
-      #if HAS_AUDIO_SENSOR
-        enableStamina();
-      #endif
-      
-      break;
-
-    case staminaAction:
-      #if HAS_AUDIO_SENSOR
-        enableStamina();
-      #endif
-
-      break;
-
-    case colorAction:
-      Serial.println("red");
-      red = Serial.parseInt();
-
-      Serial.println("green");
-      green = Serial.parseInt();
-
-      Serial.println("blue");
-      blue = Serial.parseInt();
-
-      setCurrentColor(createColor(red, green, blue));
-      
-      #if ENABLE_RANDOM_COLOR
-        lastRandomTime = millis();
-      #endif
-
-      break;
-
-    case colorRawAction:
-      setCurrentColor(Serial.parseInt());
-      
-      #if ENABLE_RANDOM_COLOR
-        lastRandomTime = millis();
-      #endif
-
-      break;
-
-    case reportAction:
-      currentColor = getCurrentColor();
-
-      Serial.println("BEGIN REPORT");
-
-      #if HAS_AUDIO_SENSOR
-        Serial.print("audio loop: `");
-        Serial.println(audioLoopEnabled ? "on`" : "off`");
-      #else
-        Serial.print("audio loop: disabled (no audio sensor)`");
-      #endif
-      
-      Serial.print("current color ");
-
-      Serial.print(Red(currentColor));
-      Serial.print(" ");
-      Serial.print(Green(currentColor));
-      Serial.print(" ");
-      Serial.print(Blue(currentColor));
-      Serial.print(" = ");
-      Serial.println(getCurrentColor());
-      Serial.println("");
-
-      #if ENABLE_RANDOM_COLOR
-        Serial.print("next color in ");
-        Serial.print(1080000 - millis() - lastRandomTime);
-        Serial.println(" milliseconds");
-        Serial.println("");
-      #else
-        Serial.print("RANDOM COLOR DISABLED");
-        Serial.println("");
-      #endif
-
-      #if HAS_DISTANCE_SENSOR
-        Serial.print("distance sensor cm");
-        Serial.println(distanceValue);
-      #endif
-      
-      #if HAS_AUDIO_SENSOR
-        Serial.print("audio sensor ");
-        Serial.println(soundValue);
-  
-        Serial.print("audio threshold ");
-        Serial.println(soundThreshold);
-        Serial.print("audio stamina: ");
-  
-        if (isStamina()) {
-          Serial.println("enabled");
-  
-          Serial.print("Stamina left: ");
-          Serial.print(staminaEnd - millis());
-          Serial.println(" milliseconds");
-        } else {
-          Serial.println("disabled");
-        }
-      #endif
-
-      Serial.println("");
-
-      Serial.print("groups ");
-      Serial.println(TOTAL_GROUPS);
-
-      Serial.print("leds ");
-      Serial.println(strip.numPixels());
-      Serial.println("");
-
-      for (int i = 0; i < TOTAL_GROUPS; i++) {
-        Serial.print("*Group ");
-        Serial.print(i);
-        Serial.println("*");
-
-        Serial.print(" leds ");
-        Serial.println(groups[i].length);
-
-        Serial.print(" start at ");
-        Serial.println(groups[i].start);
-
-        Serial.print(" visible ");
-        Serial.print(100 - groups[i].percentHidden());
-        Serial.println("%");
-
-        Serial.print(" animation ");
-        Serial.println(stringAnimation(&groups[i]));
-        Serial.println("");
-      }
-
-      Serial.println("END REPORT");
-
-      break;
-
-    case audioThresholdAction:
-      Serial.println("Enter the new audio threshold");
-      #if HAS_AUDIO_SENSOR
-        soundThreshold = Serial.parseInt();
-      #else
-        Serial.parseInt();
-      #endif
-      
-      break;
-
-    case queryAudio:
-      Serial.print("audio-level:");
-      #if HAS_AUDIO_SENSOR
-        Serial.print(soundValue);
-      #else
-        Serial.print(0);
-      #endif
-      Serial.print("\n");
-      break;
-
-    case distanceMeasurementAction:
-      Serial.print("distance to object in cm: ");
-      #if HAS_DISTANCE_SENSOR
-        Serial.print(distanceValue);
-      #else 
-        Serial.print(0);
-      #endif
-      Serial.print("\n");
-      break;
-
-    case setHilightFlicker:
-      hilightFlickerTimeout = millis();
-      swapCurrentColor();
-
-      for (int i = 0; i < TOTAL_GROUPS; i++) {
-        groups[i].animation = &hilightFlicker;
-        groups[i].selection = &hilightFlickerStrategy;
-        groups[i].counter = 0;
-        groups[i].waitFrames = 0;
-      }
-
-    default:
-      break;
-  }
-
-  Serial.println("Done");
-  while (Serial.available() > 0) Serial.read();
-  Serial.setTimeout(10);
 }
 
 SerialAction intToAction(int value) {
@@ -605,6 +644,5 @@ SerialAction intToAction(int value) {
 
   return unknownAction;
 }
-
 
 
